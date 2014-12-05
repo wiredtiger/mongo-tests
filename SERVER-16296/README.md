@@ -9,7 +9,7 @@ Running
 
 There are seperate scripts for running producers/consumers, consumer script deletes the database, so start it first. Each script configures the respective counts.
 
-mongo 16296_consumers.js
-mongo 16296_producers.js
+    mongo 16296_consumers.js
+    mongo 16296_producers.js
 
 
