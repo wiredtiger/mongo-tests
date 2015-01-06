@@ -32,7 +32,7 @@ function reader_thread(total){
       if(tCursor.hasNext()){
           var doc = tCursor.next();
           if(++count % 100000 == 0){
-              print("read:", count, db.c.stats().wiredTiger.btree["maximum tree depth"]);
+              print("read:", (new Date()).toLocaleTimeString(), count, db.c.stats().wiredTiger.btree["maximum tree depth"]);
           }
       } else {
         sleep(1000);   
