@@ -53,7 +53,7 @@ function reset_mongo
 function run_ycsb
 {
     echo "$3 dataset $2 from $1"
-    $YCSB_BIN/ycsb $3 mongodb -s -P $1 &> $OUTPUT_DIR/$2-$3
+    $YCSB_BIN/ycsb $3 mongodb -s -P $1 -p recordcount=1000 -p operationcount=10000 &> $OUTPUT_DIR/$2-$3
     print_stats ${workload_name}-$3 $OUTPUT_DIR/$2-$3 
 }
 
