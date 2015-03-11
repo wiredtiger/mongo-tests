@@ -3,7 +3,7 @@ MONGODB_CONFIG_DIR=./mongo-tests/performance/ycsb/config
 DATA_DIR=./data
 LOG_DIR=./logs
 OUTPUT_DIR=./output
-YCSB_BIN=./ycsb/bin
+YCSB_BIN=/home/jenkins/bin/ycsb/bin
 STATS_FILE=./result-stats.txt
 
 # scrape_stat metric phase file
@@ -49,12 +49,21 @@ function reset_mongo
     ./mongod --config $1 --dbpath $DATA_DIR --logpath $LOG_DIR/$2.log --fork >& /dev/null
 }
 
+function output_totals
+{
+    run_time=`grep "\[OVERALL\], RunTime" $OUTPUT_DIR/$1 | awk '{ print $3}'`
+    throughput=`grep "\[OVERALL\], Throughput" $OUTPUT_DIR/$1 | awk '{ print $3}'`
+    echo "YVALUE=$run_time" > $OUTPUT_DIR/$1-run_time.properties
+    echo "YVALUE=$throughput" > $OUTPUT_DIR/$1-throughput.properties
+}
+
 #run_ycsb workload_filepath workload_name action
 function run_ycsb
 {
     echo "$3 dataset $2 from $1"
     $YCSB_BIN/ycsb $3 mongodb -s -P $1 -p recordcount=1000 -p operationcount=10000 &> $OUTPUT_DIR/$2-$3
-    print_stats ${workload_name}-$3 $OUTPUT_DIR/$2-$3 
+    print_stats ${workload_name}-$3 $OUTPUT_DIR/$2-$3
+    output_totals $2-$3
 }
 
 mkdir $LOG_DIR $OUTPUT_DIR
