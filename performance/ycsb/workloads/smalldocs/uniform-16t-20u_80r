@@ -1,4 +1,4 @@
-recordcount=100000000
+recordcount=10000000
 operationcount=10000000
 fieldcount=1
 fieldlength=10
