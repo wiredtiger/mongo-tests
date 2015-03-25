@@ -1,3 +1,6 @@
 storage:
+  dbPath: /home/ec2-user/data
   engine: wiredTiger
-
+  wiredTiger:
+    collectionConfig:
+      blockCompressor: none
