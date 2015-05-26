@@ -1,0 +1,18 @@
+These scripts run a set of tests against a remote machine.
+
+The idea is to test the durability guarantees of WiredTiger by
+hard crashing the remote machine regularly, and validating
+that the database after the crash is reasonable.
+
+The scripts are:
+
+pt_config - Contains configuration settings and shared functionality
+pt_local_setup.sh - Script to run to get the environment configured.
+pt_local_run.sh - Script to run to power cycle the machines.
+
+pt_remote_setup.sh - used by the local script - don't run it.
+pt_remote_run.sh - used by the local script - don't run it.
+
+The scripts currently work with a virtual machine running locally in an LCX
+container.
+

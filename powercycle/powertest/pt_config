@@ -1,0 +1,141 @@
+#!/bin/bash
+# Define variables for power cycling tests.
+# Will be sourced locally and pushed to the remote.
+
+# Connection Options
+sshHost=10.0.3.147
+sshUser=ubuntu
+sshKey=~/.ssh/aws-wt
+
+# mongod Options
+storageEngine=wiredTiger
+#mongodOptions="--wiredTigerJournalCompressor none --wiredTigerCollectionBlockCompressor none --wiredTigerIndexPrefixCompression 0"
+#mongodOptions="--wiredTigerCollectionConfigString type=lsm --wiredTigerIndexConfigString type=lsm"
+#mongodOptions="--wiredTigerJournalCompressor zlib --wiredTigerCollectionBlockCompressor snappy"
+#mongodOptions="--wiredTigerJournalCompressor none"
+mongodOptions=
+
+# Configuration options forced via WIREDTIGER_CONFIG setting.
+wiredTigerConfig="log=(file_max=2MB),checkpoint=(wait=10)"
+
+# Parameters
+#dlUrl="http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-latest.tgz"
+rsyncEnabled=1
+secretPort=37017
+standardPort=27017
+localBinDir=
+bindir="EINVAL"
+numClients=3
+lxcContainer=crashme
+runTimeBase=5
+runTimeVariance=30
+
+
+# Directory structure on remote machine
+remoteTestDir=mongodb-powertest
+remoteRunDir="run"
+mlogDir=$remoteRunDir/logs
+mdataDir=$remoteRunDir/data/$storageEngine
+mbackupDir=$remoteRunDir/backup
+
+###################################
+# Commands shared by the pt script, you shouldn't change anything below here
+###################################
+
+rsyncCmd="rsync -va --delete --quiet"
+sshCmd="ssh -A -o ServerAliveCountMax=2 -o ServerAliveInterval=2 -o ConnectionAttempts=15 -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
+
+###################################
+# Utility helper functions
+###################################
+
+# sshSetup is shared by scp, rsync and ssh commands
+# sshHostConnection is only for ssh
+if [ -z "$sshHost" ]; then
+  _usage_
+fi
+
+if [ ! -z "$sshUser" ]; then
+  sshSetup="-l $sshUser "
+fi
+
+if [ ! -z "$sshKey" ]; then
+  sshSetup="-i $sshKey $sshSetup"
+fi
+
+sshHostConnection="$sshSetup $sshHost"
+
+# getBinDir rootDir
+# returns full path from rootDir
+function getBinDir {
+  rootDir=$1
+  binDir=$(find -L $rootDir -type d -name bin | tail -n 1)
+  echo $(readlink -f $binDir)
+}
+
+# waitForMongodShutdown dbDir
+# Wait until lock file is empty
+function waitForMongodShutdown {
+  dbDir=$1
+
+  lockFile=$dbDir/mongod.lock
+
+  echo "Waiting for mongod to release $lockFile"
+  waitNum=0
+  while [ -s $lockFile ];
+  do
+    sleep 1
+    waitNum=$((waitNum+1))
+    if [ $waitNum -ge 60 ]; then
+      echo "$lockFile not empty, exiting"
+      break
+    fi
+  done
+}
+
+# shutdownMongod hostUrl hostPort
+function shutdownMongod {
+  _hostUrl=$1
+  _hostPort=$2
+  
+  echo "Shutting down Mongod $_hostUrl:$_hostPort"
+  # Pipe into dev/null because otherwise we see a spurious error about
+  # query failing
+  connectToMongod $_hostUrl $_hostPort 'db.adminCommand({shutdown:1})' > /dev/null
+
+  echo "Waiting for server to shutdown"
+  waitForMongodShutdown $mdataDir
+}
+
+# connectToMongod mongo hostUrl hostPort cmds
+# return result of connection
+function connectToMongod {
+  _hostUrl=$1
+  _hostPort=$2
+  _cmds="$3"
+
+  echo "echo $_cmds | $bindir/mongo $_hostUrl:$_hostPort"
+  echo $_cmds | $bindir/mongo $_hostUrl:$_hostPort
+
+  return $?
+}
+
+# startMongod hostPort logFile
+function startMongod {
+  _hostPort=$1
+  _logFile=$2
+
+  echo "WIREDTIGER_CONFIG=$wiredTigerConfig bindir/mongod --storageEngine $storageEngine --logpath=$_logFile --logappend --dbpath $mdataDir --port $_hostPort --fork $mongodOptions"
+  WIREDTIGER_CONFIG=$wiredTigerConfig $bindir/mongod --storageEngine $storageEngine --logpath=$_logFile --logappend --dbpath $mdataDir --port $_hostPort --fork $mongodOptions
+
+  # TODO: Detminsitic way to know mongod is ready for connection
+  # nc -z -w5 localhost 27017; echo $?
+  sleep 5
+}
+
+# processRunning procName
+# Return number of instances running from procName
+function numProcessRunning {
+  return $(ps aux | grep "$1 " | grep -v grep | wc -l)
+}
+
