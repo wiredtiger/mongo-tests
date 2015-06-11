@@ -1,5 +1,5 @@
-recordcount=100000
-operationcount=100000
+recordcount=50000
+operationcount=50000
 fieldcount=100
 fieldlength=5000
 workload=com.yahoo.ycsb.workloads.CoreWorkload
@@ -9,7 +9,7 @@ updateproportion=0.5
 scanproportion=0
 insertproportion=0
 requestdistribution=zipfian
-threadcount=16
+threadcount=8
 exportmeasurementsinterval=30000
 insertretrycount=10
 ignoreinserterrors=true
