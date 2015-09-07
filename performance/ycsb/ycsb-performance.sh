@@ -44,7 +44,7 @@ function cleanup
 function reset_mongo
 {
     cleanup
-    sleep 3
+    sleep 60
     echo "starting mongod with config $1"
     ./mongod --config $1 --dbpath $DATA_DIR --logpath $LOG_DIR/$2.log --fork >& /dev/null
 }
