@@ -1,10 +1,20 @@
 WORKLOAD_DIR=./mongo-tests/performance/ycsb/workloads
 MONGODB_CONFIG_DIR=./mongo-tests/performance/ycsb/config
-DATA_DIR=./data
-LOG_DIR=./logs
-OUTPUT_DIR=./output
 YCSB_BIN=/home/jenkins/bin/ycsb/bin
 STATS_FILE=./result-stats.txt
+MONGODIR=.
+DATA_DIR=$MONGODIR/data
+LOG_DIR=$MONGODIR/logs
+OUTPUT_DIR=$MONGODIR/output
+
+if [ ! -e $WORKLOAD_DIR ]; then
+	echo "Can't find workload directory: $WORKLOAD_DIR"
+	exit 1
+fi
+if [ ! -e $MONGODIR/mongod ]; then
+	echo "Can't find mongod executable"
+	exit 1
+fi
 
 # scrape_stat metric phase file
 function scrape_stat
@@ -35,7 +45,7 @@ function print_stats
 
 function cleanup
 {
-    killall -9 mongod
+    killall -w -9 mongod || true
     rm -rf $DATA_DIR
     mkdir $DATA_DIR
 }
@@ -44,9 +54,28 @@ function cleanup
 function reset_mongo
 {
     cleanup
-    sleep 60
+    sleep 3
     echo "starting mongod with config $1"
-    ./mongod --config $1 --dbpath $DATA_DIR --logpath $LOG_DIR/$2.log --fork >& /dev/null
+    $MONGODIR/mongod --config $1 --dbpath $DATA_DIR --logpath $LOG_DIR/$2.log --fork >& /dev/null
+    check_mongo_ready 0 $1
+}
+
+function check_mongo_ready
+{
+	lap=$1
+	mongo_running=`ps -ef | grep mongod | grep -v grep | wc -l`
+	if [ $mongo_running -eq 0 ]; then
+		echo "MongoDB was not running. Trying to start"
+		sleep 60
+		echo "starting mongod with config $2"
+		$MONGODIR/mongod --config $2 --dbpath $DATA_DIR --logpath $LOG_DIR/$2.log --fork >& /dev/null
+		if [ $lap -lt 3 ]; then
+			check_mongo_ready $((lap+1)) $2
+		else
+			echo "Unable to start MongoDB, exiting"
+			exit 1
+		fi
+	fi
 }
 
 function output_totals
@@ -66,7 +95,12 @@ function run_ycsb
     output_totals $2-$3
 }
 
-mkdir $LOG_DIR $OUTPUT_DIR
+if [ ! -d $LOG_DIR ]; then
+	mkdir $LOG_DIR
+fi
+if [ ! -d $OUTPUT_DIR ]; then
+	mkdir $OUTPUT_DIR
+fi
 
 shopt -s nullglob
 for dataset in ${WORKLOAD_DIR}/*
@@ -89,7 +123,7 @@ do
                 run_ycsb $workload $workload_name load
                 needs_load=false
             fi
-        
+
             run_ycsb $workload $workload_name run
         done
     fi
