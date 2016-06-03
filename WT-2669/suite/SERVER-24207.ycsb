@@ -1,0 +1,13 @@
+fieldcount=3
+recordcount=30000000
+operationcount=400000000
+workload=com.yahoo.ycsb.workloads.CoreWorkload
+batchsize=1000
+readallfields=true
+ 
+readproportion=0.5
+updateproportion=0.5
+scanproportion=0
+insertproportion=0
+ 
+requestdistribution=zipfian
