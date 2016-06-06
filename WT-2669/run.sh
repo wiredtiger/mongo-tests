@@ -149,7 +149,7 @@ function check_monitor {
 	RES=`cat $MON_FILE | awk -F "." '{print $1}' | sort -n | uniq | tail -n 1`
 	if [ $RES -ge $FRAG_LIMIT ]; then
 		echo "Fragmentation over limit for test $1. Max recorded fragmentation is $RES";
-#		exit 1;
+		exit 1;
 	fi
 }
 
@@ -202,75 +202,9 @@ function gather_baseline {
 	egrep ">>>" $LOGDIR/sys-perf-baseline.log >> $BASELINE_FILE
 }
 
-# Compare a sys-perf run result to baseline
-# Format of a sysperf line is ">>> insert_capped : 55309.09872621494 64"
-function comp_sysperf {
-	IFS=' ' read -r -a array <<< "$line"
-	title=${array[1]}
-	value=${array[3]}
-	threads=${array[4]}
-	grep $title $RUN_PERF_FILE | while read -r line
-	do
-		IFS=' ' read -r -a array <<< "$outline"
-		if [ $threads -eq ${array[4]} ]; then
-			RES=`echo "(${array[3]} - ($value * $PERF_LIMIT)) > 0 | bc"`
-			if [ $RES -ne 1 ]; then
-				echo "Sysperf run: $title-$threads failed"
-				echo "\t Baseline: $value vs ${array[3]} not within limit"
-				PERF_FAILED=1 
-			fi
-		fi
-	done
-}
-
-# Compare a monog-perf run to baseline 
-# Format for a mongo-perf result is as the following BLOCK
-# Insert.SingleIndex.Uncontested.Rnd
-# 1	32862.598152605075
-# 8	119026.92007014854
-function comp_mongoperf {
-	baseline_res=`grep -A2 $1 $BASELINE_FILE`
-	perfrun_res=`grep -A2 $1 $RUN_PERF_FILE`
-	IFS=$'\n' eval 'result_array=($perfrun_res)'
-	index=0
-	while read -r line; do
-		IFS=' ' read -r -a array <<< "$line"
-		base_value=${array[1]}
-		base_threads=${array[0]}
-		IFS=' ' read -r -a array <<< "${result_array[$index]}"
-		this_value=${array[1]}
-        	this_threads=${array[0]}
-		RES=`echo "($this_value - ($base_value * $PERF_LIMIT)) > 0 | bc"`
-		if [ $RES -ne 1 ]; then
-			echo "Sysperf run: $title-$threads failed"
-			echo "\t Baseline: $value vs ${array[3]} not within limit"
-			PERF_FAILED=1
-		fi	
-		index=$((index+1))
-	done <<< $baseline_res
-	
-}
-
 # Compare this runs perf to the baseline
 function compare_perf {
-	cat $BASELINE_FILE | while read -r line
-	do
-		case $line in
-		# Numeric lines are skipped as we want only the header for MongoPerf
-		[0123456789]*)
-			;;
-		">>>*")
-			comp_sysperf $line
-			;;
-		# Anything left should be a mongo-perf header	
-		*)
-			comp_mongoperf $line
-			;;	
-		esac		
-	done
-	if [ $PERF_FAILED -eq 1]; then
-		exit 1;
-	fi
+	RES=python $RUNDIR/perf-compare.py $BASELINE_FILE $RUN_PERF_FILE
 }
 
 # Main
@@ -291,7 +225,7 @@ mkdir $LOGDIR
 # First we grab all the repos we need to run these tests
 get_repos > $LOGDIR/fetch.log
 # Now we make MongoDB
-#make_mongo > $LOGDIR/make.log
+make_mongo > $LOGDIR/make.log
 
 # Gather a baseline for perf analysis
 if [ $BASELINE -ne 0 ]; then
@@ -316,7 +250,7 @@ if [ $LOCAL -ne 0 ]; then
 		echo "Test for SERVER-23333 failed"
 		echo "Error(s) from log were:"
 		grep "assert failed" $MONGODIR/tests.log
-		#exit 1
+		exit 1
 	fi
 	cd $RUNDIR
 
@@ -341,7 +275,6 @@ if [ $LOCAL -ne 0 ]; then
 	start_monitor
 	start_timer
 	for i in $(seq 1 9); do
-		#echo "Launching thread $i" > $LOGDIR/SERVER-22906.log
 		$MONGODIR/mongo --quiet $SUITE/SERVER-22906.js &
 	done
 	$MONGODIR/mongo --quiet $SUITE/SERVER-22906.js
@@ -411,11 +344,11 @@ if [ $EVG -ne 0 ]; then
         start_mongod
         start_timer
 	cd $RUNDIR/workloads
-#	stdbuf -oL python run_workloads.py --shell $MONGODIR/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf.log
+	stdbuf -oL python run_workloads.py --shell $MONGODIR/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf.log
 	cd $RUNDIR
         end_timer
         check_mongo
 	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGODIR; git show-ref -s | head -n1; cd ..`" $LOGDIR/mongo-perf.log > $RUN_PERF_FILE
-        egrep ">>>" $LOGDIR/sys-perf-baseline.log >> $RUN_PERF_FILE
+        egrep ">>>" $LOGDIR/sys-perf.log >> $RUN_PERF_FILE
 	compare_perf
 fi
