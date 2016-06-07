@@ -1,5 +1,7 @@
 RUNDIR=`pwd`
 MONGODIR=$RUNDIR/mongo
+MONGO_SOURCE=$RUNDIR/mongo-source
+MONGO_BASE=$RUNDIR/mongo-baseline
 DBPATH=$MONGODIR/db
 SUITE=$RUNDIR/suite
 YCSB_BIN=~/work/ycsb/bin/ycsb
@@ -20,6 +22,7 @@ YCSB=0
 LOCAL=0
 EVG=0
 BASELINE=0
+COMPILE=0
 
 function print_help {
 	echo "run.sh --suites=[local,ycsb,evg] --baseline"
@@ -37,44 +40,49 @@ function pass_args {
 	if [ "$1" == "--help" ]; then
 		print_help
 	fi
-	SPLIT=`echo $1 | awk -F= '{print $1}'`
-	SUITES=`echo $1 | awk -F= '{print $2}'`
-	IFS=', ' read -r -a array <<< "$SUITES"
-	case $SPLIT in 
-	--suites)
-		for suite in "${array[@]}"	
-		do
-			case $suite in
-			ycsb)
-				YCSB=1
-				;;
-			local)
-				LOCAL=1
-				;;
-			evg)
-				EVG=1
-				;;
-			*)
-				print_help
-				;;	
-			esac
-		done
-		;;
-	--baseline)
-		if [ -f $BASELINE_FILE ]; then
-			echo "Baseline file exists. To re-gather please delete $BASELINE_FILE and re-run."
-		else
-			echo "Warning: Baseline gathering can take some time, so be prepared to wait"
-			BASELINE=1
-		fi
-		;;
-	*)
-		print_help
-	esac
+	for var in "$@"
+	do
+		case $var in 
+		--suites*)
+			SUITES=`echo $var | awk -F= '{print $2}'`
+			IFS=', ' read -r -a array <<< "$SUITES"
+			for suite in "${array[@]}"	
+			do
+				case $suite in
+				ycsb)
+					YCSB=1
+					;;
+				local)
+					LOCAL=1
+					;;
+				evg)
+					EVG=1
+					;;
+				*)
+					print_help
+					;;	
+				esac
+			done
+			;;
+		--baseline)
+			if [ -f $BASELINE_FILE ]; then
+				echo "Baseline file exists. To re-gather please delete $BASELINE_FILE and re-run."
+			else
+				echo "Warning: Baseline gathering can take some time, so be prepared to wait"
+				BASELINE=1
+			fi
+			;;
+		--compile)
+			COMPILE=1
+			MONGO_SOURCE=$MONGO	
+		*)
+			print_help
+		esac
+	done
 }
 
 function get_repos {
-	git clone git@github.com:mongodb/mongo.git 2>&1
+	git clone git@github.com:mongodb/mongo.git $MONGO_SOURCE 2>&1
 	if [ $((EVG+BASELINE)) -ne 0 ]; then
 		git clone git@github.com:10gen/workloads.git 2>&1
 		git clone https://github.com/mongodb/mongo-perf 2>&1
@@ -83,12 +91,14 @@ function get_repos {
 
 # Pull down git repo and compile 
 function make_mongo {
-	git clone http://github.com/mongodb/mongo
-	cd $MONGODIR 
-	git checkout master
-	# Update wiredtiger code can be added here
-	scons -j10 core --disable-warnings-as-errors
-	cd ..
+	# We compile only when requested
+	if [ $COMPILE -ne 0 ]; then
+		cd $MONGO_SOURCE 
+		git checkout master
+		# Update wiredtiger code can be added here
+		scons -j10 core --disable-warnings-as-errors
+		cd ..
+	fi
 }
 # Stop and MongoDB instances, cleanup the dbapth
 function clean_mongod {
@@ -176,12 +186,15 @@ function end_timer {
 function gather_baseline {
         echo "Starting Evergreen Baseline"
         echo "Starting a mongo-perf baseline"
+	if [ -f $MONGO_BASE/bin ]; then
+		MONGO_BASE=$MONGO_BASE/bin
+	fi
         # mongo-perf run
         clean_mongod
         start_mongod
         start_timer
         cd $RUNDIR/mongo-perf
-        stdbuf -oL python benchrun.py --shell $MONGODIR/mongo -t 1 8 --trialCount 1 \
+        stdbuf -oL python benchrun.py --shell $MONGO_BASE/mongo -t 1 8 --trialCount 1 \
                 -f testcases/*.js --includeFilter insert misc update query \
                 --includeFilter core regression --excludeFilter single_threaded \
                 --out $LOGDIR/perf_baseline.json --exclude-testbed > $LOGDIR/mongo-perf-baseline.log 2>&1
@@ -194,11 +207,11 @@ function gather_baseline {
         start_mongod
         start_timer
         cd $RUNDIR/workloads
-        stdbuf -oL python run_workloads.py --shell $MONGODIR/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf-baseline.log
+        stdbuf -oL python run_workloads.py --shell $MONGO_BASE/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf-baseline.log
 	cd $RUNDIR
         end_timer
         check_mongo
-	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGODIR; git show-ref -s | head -n1; cd ..`" $LOGDIR/mongo-perf-baseline.log > $BASELINE_FILE
+	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGO_BASE; ./mongod --version | grep git | awk '{print $3}'; cd ..`" $LOGDIR/mongo-perf-baseline.log > $BASELINE_FILE
 	egrep ">>>" $LOGDIR/sys-perf-baseline.log >> $BASELINE_FILE
 }
 
@@ -221,6 +234,9 @@ pass_args $@
 echo "Performing setup"
 rm -rf $LOGDIR
 mkdir $LOGDIR
+if [ -f $MONGODIR/bin ]; then
+	MONGODIR=$MONGODIR/bin
+fi
 
 # First we grab all the repos we need to run these tests
 get_repos > $LOGDIR/fetch.log
@@ -241,7 +257,7 @@ if [ $LOCAL -ne 0 ]; then
 	echo "Starting local worklaods"
 	# SERVER-23333 workload
 	echo "SERVER-23333"
-	cd $MONGODIR
+	cd $MONGO_SOURCE
 	start_timer
 	stdbuf -oL python buildscripts/resmoke.py --executor=no_passthrough_with_mongod $SUITE/SERVER-23333.js --log=file > $LOGDIR/SERVER-23333.log 2>&1
 	RES=$?
@@ -348,7 +364,7 @@ if [ $EVG -ne 0 ]; then
 	cd $RUNDIR
         end_timer
         check_mongo
-	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGODIR; git show-ref -s | head -n1; cd ..`" $LOGDIR/mongo-perf.log > $RUN_PERF_FILE
+	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGODIR; ./mongod --version | grep git | awk '{print $3}'; cd ..`" $LOGDIR/mongo-perf.log > $RUN_PERF_FILE
         egrep ">>>" $LOGDIR/sys-perf.log >> $RUN_PERF_FILE
 	compare_perf
 fi
