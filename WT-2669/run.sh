@@ -74,7 +74,9 @@ function pass_args {
 			;;
 		--compile)
 			COMPILE=1
-			MONGO_SOURCE=$MONGO	
+			MONGO_SOURCE=$MONGO
+			MONGO_BASE=$MONGO
+			;;
 		*)
 			print_help
 		esac
