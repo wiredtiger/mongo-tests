@@ -112,7 +112,7 @@ function clean_mongod {
 
 # Start a mongodb instance
 function start_mongod {
-	$MONGODIR/mongod --logpath=$LOGDIR/mongodb.log --dbpath=$DBPATH --fork --nojournal --quiet > /dev/null
+	$1/mongod --logpath=$LOGDIR/mongodb.log --dbpath=$DBPATH --fork --nojournal --quiet > /dev/null
 	sleep 5;
 }
 
@@ -188,12 +188,12 @@ function end_timer {
 function gather_baseline {
         echo "Starting Evergreen Baseline"
         echo "Starting a mongo-perf baseline"
-	if [ -f $MONGO_BASE/bin ]; then
+	if [ -d $MONGO_BASE/bin ]; then
 		MONGO_BASE=$MONGO_BASE/bin
 	fi
         # mongo-perf run
         clean_mongod
-        start_mongod
+        start_mongod $MONGO_BASE
         start_timer
         cd $RUNDIR/mongo-perf
         stdbuf -oL python benchrun.py --shell $MONGO_BASE/mongo -t 1 8 --trialCount 1 \
@@ -206,14 +206,14 @@ function gather_baseline {
 
         echo "Starting a sys-perf baseline"
         clean_mongod
-        start_mongod
+        start_mongod $MONGO_BASE
         start_timer
         cd $RUNDIR/workloads
         stdbuf -oL python run_workloads.py --shell $MONGO_BASE/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf-baseline.log
 	cd $RUNDIR
         end_timer
         check_mongo
-	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGO_BASE; ./mongod --version | grep git | awk '{print $3}'; cd ..`" $LOGDIR/mongo-perf-baseline.log > $BASELINE_FILE
+	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGO_BASE; ./mongod --version | grep git | awk '{print $3}'; cd $RUNDIR`" $LOGDIR/mongo-perf-baseline.log > $BASELINE_FILE
 	egrep ">>>" $LOGDIR/sys-perf-baseline.log >> $BASELINE_FILE
 }
 
@@ -236,7 +236,7 @@ pass_args $@
 echo "Performing setup"
 rm -rf $LOGDIR
 mkdir $LOGDIR
-if [ -f $MONGODIR/bin ]; then
+if [ -d $MONGODIR/bin ]; then
 	MONGODIR=$MONGODIR/bin
 fi
 
@@ -275,7 +275,7 @@ if [ $LOCAL -ne 0 ]; then
 	# SERVER-20306 workload
 	echo "Starting SERVER-20306"
 	clean_mongod
-	start_mongod
+	start_mongod $MONGODIR
 	start_monitor
 	cd $MONGODIR
 	start_timer
@@ -289,7 +289,7 @@ if [ $LOCAL -ne 0 ]; then
 	# SERVER-22906 workload
 	echo "Starting SERVER-22906"
 	clean_mongod
-	start_mongod
+	start_mongod $MONGODIR
 	start_monitor
 	start_timer
 	for i in $(seq 1 9); do
@@ -309,7 +309,7 @@ if [ $YCSB -ne 0 ]; then
 	# SERVER-24207 workload
 	echo "Starting SERVER-24207"
 	clean_mongod
-	start_mongod
+	start_mongod $MONGODIR
 	start_monitor
 	start_timer
 	load_ycsb $SUITE/SERVER-24207.ycsb > $LOGDIR/SERVER-24207-load.log
@@ -321,7 +321,7 @@ if [ $YCSB -ne 0 ]; then
 	# Custom smalldoc's workload for this suite
 	echo "Starting WT-2669"
 	clean_mongod
-	start_mongod
+	start_mongod $MONGODIR
 	start_monitor
 	start_timer
 	load_ycsb $SUITE/WT-2669.ycsb > $LOGDIR/WT-2669-load.log
@@ -346,7 +346,7 @@ if [ $EVG -ne 0 ]; then
 	echo "Starting a mongo-perf run"
 	# mongo-perf run
 	clean_mongod
-        start_mongod
+        start_mongod $MONGODIR
         start_timer
 	cd $RUNDIR/mongo-perf
 	stdbuf -oL python benchrun.py --shell $MONGODIR/mongo -t 1 8 --trialCount 1 \
@@ -359,7 +359,7 @@ if [ $EVG -ne 0 ]; then
 
 	echo "Starting a sys-perf run"
 	clean_mongod
-        start_mongod
+        start_mongod $MONGODIR
         start_timer
 	cd $RUNDIR/workloads
 	stdbuf -oL python run_workloads.py --shell $MONGODIR/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf.log
