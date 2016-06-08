@@ -119,9 +119,10 @@ function start_mongod {
 # MongoDB should still be running when this is called. Check if it crashed - we expect that the
 # OOMKiller may get involved here!
 function check_mongo {
+	cp -rp $DBPATH/diagnostic.data $LOGDIR/$1-diag
 	RES=`ps -ef | grep mongod | grep -v grep | wc -l`
 	if [ $RES -eq 0 ]; then
-	        echo "Test for SERVER-23333 failed"
+	        echo "Test for $1 failed"
 	        echo "Test failed as MongoDB crashed, potentially due to OOM killer"
 	        exit 1
 	fi
@@ -202,7 +203,7 @@ function gather_baseline {
                 --out $LOGDIR/perf_baseline.json --exclude-testbed > $LOGDIR/mongo-perf-baseline.log 2>&1
         cd $RUNDIR
         end_timer
-        check_mongo
+        check_mongo "mongo-perf-baseline"
 
         echo "Starting a sys-perf baseline"
         clean_mongod
@@ -212,7 +213,7 @@ function gather_baseline {
         stdbuf -oL python run_workloads.py --shell $MONGO_BASE/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf-baseline.log
 	cd $RUNDIR
         end_timer
-        check_mongo
+        check_mongo "sys-perf-baseline"
 	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGO_BASE; ./mongod --version | grep git | awk '{print $3}'; cd $RUNDIR`" $LOGDIR/mongo-perf-baseline.log > $BASELINE_FILE
 	egrep ">>>" $LOGDIR/sys-perf-baseline.log >> $BASELINE_FILE
 }
@@ -261,7 +262,7 @@ if [ $LOCAL -ne 0 ]; then
 	echo "SERVER-23333"
 	cd $MONGO_SOURCE
 	start_timer
-	stdbuf -oL python buildscripts/resmoke.py --executor=no_passthrough_with_mongod $SUITE/SERVER-23333.js --log=file > $LOGDIR/SERVER-23333.log 2>&1
+	stdbuf -oL python buildscripts/resmoke.py --executor=no_passthrough_with_mongod $SUITE/SERVER-23333.js --mongo=$MONGODIR/mongo --mongod=$MONGODIR/mongod --log=file > $LOGDIR/SERVER-23333.log 2>&1
 	RES=$?
 	end_timer
 	if [ $RES -ne 0 ]; then
@@ -283,7 +284,7 @@ if [ $LOCAL -ne 0 ]; then
 	end_timer
 	stop_monitor > /dev/null
 	check_monitor "SERVER-20306"
-	check_mongo
+	check_mongo "SERVER-20306"
 	cd $RUNDIR
 
 	# SERVER-22906 workload
@@ -300,7 +301,7 @@ if [ $LOCAL -ne 0 ]; then
 	# Wait for the other threads
 	sleep 10
 	stop_monitor > /dev/null
-	check_mongo
+	check_mongo "SERVER-22906"
 	check_monitor "SERVER-22906"
 fi
 
@@ -315,7 +316,7 @@ if [ $YCSB -ne 0 ]; then
 	load_ycsb $SUITE/SERVER-24207.ycsb > $LOGDIR/SERVER-24207-load.log
 	end_timer
 	stop_monitor
-	check_mongo
+	check_mongo "SERVER-24207"
 	check_monitor "SERVER-24207"
 
 	# Custom smalldoc's workload for this suite
@@ -328,11 +329,11 @@ if [ $YCSB -ne 0 ]; then
 	stop_monitor
 	check_monitor "WT-2669-load"
 	start_monitor
-	check_mongo
+	check_mongo "WT-2669-load"
 	run_ycsb $SUITE/WT-2669.ycsb > $LOGDIR/WT-2669-run.log
 	end_timer
 	stop_monitor
-	check_mongo
+	check_mongo "WT-2669-run"
 	check_monitor "WT-2669-run"
 fi
 
@@ -355,7 +356,7 @@ if [ $EVG -ne 0 ]; then
                 --out $LOGDIR/perf.json --exclude-testbed > $LOGDIR/mongo-perf.log 2>&1
 	cd $RUNDIR
 	end_timer
-	check_mongo
+	check_mongo "mongo-perf"
 
 	echo "Starting a sys-perf run"
 	clean_mongod
@@ -365,7 +366,7 @@ if [ $EVG -ne 0 ]; then
 	stdbuf -oL python run_workloads.py --shell $MONGODIR/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf.log
 	cd $RUNDIR
         end_timer
-        check_mongo
+        check_mongo "sys-perf"
 	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGODIR; ./mongod --version | grep git | awk '{print $3}'; cd ..`" $LOGDIR/mongo-perf.log > $RUN_PERF_FILE
         egrep ">>>" $LOGDIR/sys-perf.log >> $RUN_PERF_FILE
 	compare_perf
