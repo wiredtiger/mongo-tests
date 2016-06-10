@@ -2,6 +2,18 @@
 
 #Steering Variables
 RUNDIR=`pwd`
+
+## Defaults for user variables
+# The mongodb version to use for tests if not compiling
+MONGODIR=$RUNDIR/newer_build/mongodb-linux-x86_64-3.3.8-21-g2559d31
+# The mongodb version to use for baseline if not compiling
+MONGO_BASE=$RUNDIR/default_build/mongodb-linux-x86_64-3.3.6-229-ge533634
+# The path to the YCSB binary
+YCSB_BIN=~/work/jira/w2669/YCSB/bin/ycsb
+# The size of the WT cache to use in GBs, 0 is system default
+CACHE_SIZE=5
+
+# The following shouldn't need to be changed.
 MONGO_SOURCE=$RUNDIR/mongo-source
 DBPATH=$MONGODIR/db
 SUITE=$RUNDIR/suite
@@ -15,16 +27,6 @@ FRAG_LIMIT=50
 PERF_LIMIT=0.1
 TIMER=0
 PERF_FAILED=0
-
-## Defaults for user variables
-# The mongodb version to use for tests if not compiling
-MONGODIR=$RUNDIR/mongo
-# The mongodb version to use for baseline if not compiling
-MONGO_BASE=$RUNDIR/mongo-baseline
-# The path to the YCSB binary
-YCSB_BIN=~/work/ycsb/bin/ycsb
-# The size of the WT cache to use in GBs, 0 is system default
-CACHE_SIZE=0
 
 SYSPERF_WORKLOADS="contended_update.js insert_capped_indexes.js insert_capped.js insert_ttl.js jtrue.js"
 
