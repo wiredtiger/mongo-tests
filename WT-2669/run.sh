@@ -1,10 +1,10 @@
+#!/bin/bash
+
+#Steering Variables
 RUNDIR=`pwd`
-MONGODIR=$RUNDIR/mongo
 MONGO_SOURCE=$RUNDIR/mongo-source
-MONGO_BASE=$RUNDIR/mongo-baseline
 DBPATH=$MONGODIR/db
 SUITE=$RUNDIR/suite
-YCSB_BIN=~/work/ycsb/bin/ycsb
 LOGDIR=$RUNDIR/log
 MON_FILE=$LOGDIR/monitor.log
 BASELINE_FILE=$SUITE/baseline.out
@@ -14,6 +14,16 @@ FRAG_LIMIT=50
 PERF_LIMIT=0.1
 TIMER=0
 PERF_FAILED=0
+
+## Defaults for user variables
+# The mongodb version to use for tests if not compiling
+MONGODIR=$RUNDIR/mongo
+# The mongodb version to use for baseline if not compiling
+MONGO_BASE=$RUNDIR/mongo-baseline
+# The path to the YCSB binary
+YCSB_BIN=~/work/ycsb/bin/ycsb
+# The size of the WT cache to use in GBs, 0 is system default
+CACHE_SIZE=0
 
 SYSPERF_WORKLOADS="contended_update.js insert_capped_indexes.js insert_capped.js insert_ttl.js jtrue.js"
 
@@ -112,7 +122,11 @@ function clean_mongod {
 
 # Start a mongodb instance
 function start_mongod {
-	$1/mongod --logpath=$LOGDIR/mongodb.log --dbpath=$DBPATH --fork --nojournal --quiet > /dev/null
+	if [ $CACHE_SIZE -eq 0 ]; then
+		$1/mongod --logpath=$LOGDIR/mongodb.log --dbpath=$DBPATH --fork --nojournal --quiet > /dev/null
+	else
+		$1/mongod --logpath=$LOGDIR/mongodb.log --dbpath=$DBPATH --wiredTigerCacheSizeGB=$CACHE_SIZE --fork --nojournal --quiet > /dev/null
+	fi
 	sleep 5;
 }
 
