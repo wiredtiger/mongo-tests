@@ -84,7 +84,7 @@ function pass_args {
 }
 
 function get_repos {
-	git clone git@github.com:mongodb/mongo.git $MONGO_SOURCE 2>&1
+	git clone https://github.com/mongodb/mongo.git $MONGO_SOURCE 2>&1
 	if [ $((EVG+BASELINE)) -ne 0 ]; then
 		git clone git@github.com:10gen/workloads.git 2>&1
 		git clone https://github.com/mongodb/mongo-perf 2>&1
@@ -261,14 +261,19 @@ if [ $LOCAL -ne 0 ]; then
 	# SERVER-23333 workload
 	echo "SERVER-23333"
 	cd $MONGO_SOURCE
-	start_timer
-	stdbuf -oL python buildscripts/resmoke.py --executor=no_passthrough_with_mongod $SUITE/SERVER-23333.js --mongo=$MONGODIR/mongo --mongod=$MONGODIR/mongod --log=file > $LOGDIR/SERVER-23333.log 2>&1
+	# The resmoke scripts' --mongo and --mongod options are broken, work around this
+        if [ "$MONGO_SOURCE" != "$MONGODIR" ]; then
+                cp $MONGODIR/mongo $MONGO_SOURCE
+                cp $MONGODIR/mongod $MONGO_SOURCE
+        fi
+        start_timer
+        stdbuf -oL python buildscripts/resmoke.py --executor=no_passthrough_with_mongod $SUITE/SERVER-23333.js --log=file > $LOGDIR/SERVER-23333.log 2>&1
 	RES=$?
 	end_timer
 	if [ $RES -ne 0 ]; then
 		echo "Test for SERVER-23333 failed"
 		echo "Error(s) from log were:"
-		grep "assert failed" $MONGODIR/tests.log
+		grep "assert failed" $MONGO_SOURCE/tests.log
 		exit 1
 	fi
 	cd $RUNDIR
