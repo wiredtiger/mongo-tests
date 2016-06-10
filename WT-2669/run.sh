@@ -284,7 +284,7 @@ if [ $LOCAL -ne 0 ]; then
                 cp $MONGODIR/mongod $MONGO_SOURCE
         fi
         start_timer
-        stdbuf -oL python buildscripts/resmoke.py --executor=no_passthrough_with_mongod $SUITE/SERVER-23333.js --log=file > $LOGDIR/SERVER-23333.log 2>&1
+        stdbuf -oL python buildscripts/resmoke.py --dbpathPrefix=$LOGDIR --executor=no_passthrough_with_mongod $SUITE/SERVER-23333.js --log=file > $LOGDIR/SERVER-23333.log 2>&1
 	RES=$?
 	end_timer
 	if [ $RES -ne 0 ]; then
