@@ -6,6 +6,7 @@ MONGO_SOURCE=$RUNDIR/mongo-source
 DBPATH=$MONGODIR/db
 SUITE=$RUNDIR/suite
 LOGDIR=$RUNDIR/log
+RUN_LOG=$LOGDIR/run.log
 MON_FILE=$LOGDIR/monitor.log
 BASELINE_FILE=$SUITE/baseline.out
 RUN_PERF_FILE=$LOGDIR/perf_final.log
@@ -76,9 +77,9 @@ function pass_args {
 			;;
 		--baseline)
 			if [ -f $BASELINE_FILE ]; then
-				echo "Baseline file exists. To re-gather please delete $BASELINE_FILE and re-run."
+				echo "Baseline file exists. To re-gather please delete $BASELINE_FILE and re-run." | tee -a $RUN_LOG
 			else
-				echo "Warning: Baseline gathering can take some time, so be prepared to wait"
+				echo "Warning: Baseline gathering can take some time, so be prepared to wait" | tee -a $RUN_LOG
 				BASELINE=1
 			fi
 			;;
@@ -136,8 +137,8 @@ function check_mongo {
 	cp -rp $DBPATH/diagnostic.data $LOGDIR/$1-diag
 	RES=`ps -ef | grep mongod | grep -v grep | wc -l`
 	if [ $RES -eq 0 ]; then
-	        echo "Test for $1 failed"
-	        echo "Test failed as MongoDB crashed, potentially due to OOM killer"
+	        echo "Test for $1 failed" | tee -a $RUN_LOG
+	        echo "Test failed as MongoDB crashed, potentially due to OOM killer" | tee -a $RUN_LOG
 	        #exit 1
 	fi
 
@@ -170,12 +171,12 @@ function stop_monitor {
 # This is the FRAG_LIMIT global variable
 function check_monitor {
 	if [ ! -f $MON_FILE ]; then
-		echo "ERROR: Monitor file $MON_FILE, not found."
+		echo "ERROR: Monitor file $MON_FILE, not found." | tee -a $RUN_LOG
 		#exit 1;
 	fi
 	RES=`cat $MON_FILE | awk -F "." '{print $1}' | sort -n | uniq | tail -n 1`
 	if [ $RES -ge $FRAG_LIMIT ]; then
-		echo "Fragmentation over limit for test $1. Max recorded fragmentation is $RES";
+		echo "Fragmentation over limit for test $1. Max recorded fragmentation is $RES"; | tee -a $RUN_LOG
 		#exit 1;
 	fi
 }
@@ -196,13 +197,13 @@ function start_timer {
 
 function end_timer {
 	TIMER_END=`date "+%s"`
-	echo "Run took: $((TIMER_END-TIMER))s"
+	echo "Run took: $((TIMER_END-TIMER))s" | tee -a $RUN_LOG
 }
 
 # Run Evergreen stuff to gether 
 function gather_baseline {
-        echo "Starting Evergreen Baseline"
-        echo "Starting a mongo-perf baseline"
+        echo "Starting Evergreen Baseline" | tee -a $RUN_LOG
+        echo "Starting a mongo-perf baseline" | tee -a $RUN_LOG
 	if [ -d $MONGO_BASE/bin ]; then
 		MONGO_BASE=$MONGO_BASE/bin
 	fi
@@ -219,7 +220,7 @@ function gather_baseline {
         end_timer
         check_mongo "mongo-perf-baseline"
 
-        echo "Starting a sys-perf baseline"
+        echo "Starting a sys-perf baseline" | tee -a $RUN_LOG
         clean_mongod
         start_mongod $MONGO_BASE
         start_timer
@@ -248,7 +249,7 @@ function compare_perf {
 
 # Basic setup stuff
 pass_args $@
-echo "Performing setup"
+echo "Performing setup" | tee -a $RUN_LOG
 rm -rf $LOGDIR
 mkdir $LOGDIR
 if [ -d $MONGODIR/bin ]; then
@@ -262,7 +263,7 @@ make_mongo > $LOGDIR/make.log
 
 # Gather a baseline for perf analysis
 if [ $BASELINE -ne 0 ]; then
-	echo "Gathering baseline for Evergreen Runs. This WILL take some time so bare with us"
+	echo "Gathering baseline for Evergreen Runs. This WILL take some time so bare with us" | tee -a $RUN_LOG
 	if [ -f $BASELINE_FILE ]; then
 		cp $BASELINE_FILE $BASELINE_FILE.bkp
 	fi
@@ -271,9 +272,9 @@ fi
 
 # Run the suites, if selected
 if [ $LOCAL -ne 0 ]; then
-	echo "Starting local worklaods"
+	echo "Starting local worklaods" | tee -a $RUN_LOG
 	# SERVER-23333 workload
-	echo "SERVER-23333"
+	echo "SERVER-23333" | tee -a $RUN_LOG
 	cd $MONGO_SOURCE
 	# The resmoke scripts' --mongo and --mongod options are broken, work around this
         if [ "$MONGO_SOURCE" != "$MONGODIR" ]; then
@@ -285,15 +286,15 @@ if [ $LOCAL -ne 0 ]; then
 	RES=$?
 	end_timer
 	if [ $RES -ne 0 ]; then
-		echo "Test for SERVER-23333 failed"
-		echo "Error(s) from log were:"
+		echo "Test for SERVER-23333 failed" | tee -a $RUN_LOG
+		echo "Error(s) from log were:" | tee -a $RUN_LOG
 		grep "assert failed" $MONGO_SOURCE/tests.log
 		#exit 1
 	fi
 	cd $RUNDIR
 
 	# SERVER-20306 workload
-	echo "Starting SERVER-20306"
+	echo "Starting SERVER-20306" | tee -a $RUN_LOG
 	clean_mongod
 	start_mongod $MONGODIR
 	start_monitor
@@ -307,7 +308,7 @@ if [ $LOCAL -ne 0 ]; then
 	cd $RUNDIR
 
 	# SERVER-22906 workload
-	echo "Starting SERVER-22906"
+	echo "Starting SERVER-22906" | tee -a $RUN_LOG
 	clean_mongod
 	start_mongod $MONGODIR
 	start_monitor
@@ -325,9 +326,9 @@ if [ $LOCAL -ne 0 ]; then
 fi
 
 if [ $YCSB -ne 0 ]; then
-	echo "Starting YCSB Workloads"
+	echo "Starting YCSB Workloads" | tee -a $RUN_LOG
 	# SERVER-24207 workload
-	echo "Starting SERVER-24207"
+	echo "Starting SERVER-24207" | tee -a $RUN_LOG
 	clean_mongod
 	start_mongod $MONGODIR
 	start_monitor
@@ -339,7 +340,7 @@ if [ $YCSB -ne 0 ]; then
 	check_monitor "SERVER-24207"
 
 	# Custom smalldoc's workload for this suite
-	echo "Starting WT-2669"
+	echo "Starting WT-2669" | tee -a $RUN_LOG
 	clean_mongod
 	start_mongod $MONGODIR
 	start_monitor
@@ -358,12 +359,12 @@ fi
 
 if [ $EVG -ne 0 ]; then
 	if [ ! -f $BASELINE_FILE ]; then
-		echo "No baseline file available. Please run '$0 --baseline' to gather one"
-		echo "Without a baseline, there can be no comparison. Exiting"
+		echo "No baseline file available. Please run '$0 --baseline' to gather one" | tee -a $RUN_LOG
+		echo "Without a baseline, there can be no comparison. Exiting" | tee -a $RUN_LOG
 		exit 0;
 	fi
-	echo "Starting Evergreen Workloads"
-	echo "Starting a mongo-perf run"
+	echo "Starting Evergreen Workloads" | tee -a $RUN_LOG
+	echo "Starting a mongo-perf run" | tee -a $RUN_LOG
 	# mongo-perf run
 	clean_mongod
         start_mongod $MONGODIR
@@ -377,7 +378,7 @@ if [ $EVG -ne 0 ]; then
 	end_timer
 	check_mongo "mongo-perf"
 
-	echo "Starting a sys-perf run"
+	echo "Starting a sys-perf run" | tee -a $RUN_LOG
 	clean_mongod
         start_mongod $MONGODIR
         start_timer
