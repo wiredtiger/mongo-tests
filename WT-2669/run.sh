@@ -74,8 +74,8 @@ function pass_args {
 			;;
 		--compile)
 			COMPILE=1
-			MONGO_SOURCE=$MONGO
-			MONGO_BASE=$MONGO
+			MONGODIR=$MONGO_SOURCE
+			MONGO_BASE=$MONGO_SOURCE
 			;;
 		*)
 			print_help
@@ -124,7 +124,7 @@ function check_mongo {
 	if [ $RES -eq 0 ]; then
 	        echo "Test for $1 failed"
 	        echo "Test failed as MongoDB crashed, potentially due to OOM killer"
-	        exit 1
+	        #exit 1
 	fi
 
 }
@@ -157,12 +157,12 @@ function stop_monitor {
 function check_monitor {
 	if [ ! -f $MON_FILE ]; then
 		echo "ERROR: Monitor file $MON_FILE, not found."
-		exit 1;
+		#exit 1;
 	fi
 	RES=`cat $MON_FILE | awk -F "." '{print $1}' | sort -n | uniq | tail -n 1`
 	if [ $RES -ge $FRAG_LIMIT ]; then
 		echo "Fragmentation over limit for test $1. Max recorded fragmentation is $RES";
-		exit 1;
+		#exit 1;
 	fi
 }
 
@@ -274,7 +274,7 @@ if [ $LOCAL -ne 0 ]; then
 		echo "Test for SERVER-23333 failed"
 		echo "Error(s) from log were:"
 		grep "assert failed" $MONGO_SOURCE/tests.log
-		exit 1
+		#exit 1
 	fi
 	cd $RUNDIR
 
