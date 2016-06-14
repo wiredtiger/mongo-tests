@@ -162,6 +162,14 @@ function start_monitor {
 	MON_PID=$!
 	# Supress the terminated messages
 	disown
+	$MONGODIR/mongo > $MON_FILE.jemalloc --quiet --eval \
+	"while(true) {                                                          
+                var out = db.serverStatus({tcmalloc:1});                        
+                var heapsize = out.mem.resident*1024*1024;                  
+                var allocated = out.wiredtiger.cache['bytes currently in the cache'];   
+                print((heapsize-allocated)/allocated*100);                      
+                sleep(1000*1);                                                  
+        }" &
 }
 
 # Stop the Monitor thread
@@ -178,7 +186,7 @@ function check_monitor {
 	fi
 	RES=`cat $MON_FILE | awk -F "." '{print $1}' | sort -n | uniq | tail -n 1`
 	if [ $RES -ge $FRAG_LIMIT ]; then
-		echo "Fragmentation over limit for test $1. Max recorded fragmentation is $RES"; | tee -a $RUN_LOG
+		echo "Fragmentation over limit for test $1. Max recorded fragmentation is $RES" | tee -a $RUN_LOG
 		#exit 1;
 	fi
 }
@@ -250,10 +258,11 @@ function compare_perf {
 # - The equivalent of the evergreen performance and sys-perf suites
 
 # Basic setup stuff
-pass_args $@
-echo "Performing setup" | tee -a $RUN_LOG
 rm -rf $LOGDIR
 mkdir $LOGDIR
+touch $RUN_LOG
+pass_args $@
+echo "Performing setup" | tee -a $RUN_LOG
 if [ -d $MONGODIR/bin ]; then
 	MONGODIR=$MONGODIR/bin
 fi
