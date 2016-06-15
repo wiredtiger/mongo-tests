@@ -177,7 +177,7 @@ function start_monitor {
 	 while(true) {
 		var out = db.serverStatus({tcmalloc:1});
 		var heapsize = out.mem.resident*1024*1024;
-		var allocated = out.wiredtiger.cache['bytes currently in the cache'];
+		var allocated = out.wiredTiger.cache['bytes currently in the cache'];
 		print((heapsize-allocated)/allocated*100);
 		sleep(1000*1);
 	}" &
@@ -202,9 +202,9 @@ function check_monitor {
 		echo "ERROR: Monitor file $FMON_FILE, not found." | tee -a $RUN_LOG
 		#exit 1;
 	fi
-	USE_FALLBACK=`wc -l $MON_FILE`
-	if [ $USE_FALLBACK -le 2 ]; then
-		$FILE=$FMON_FILE
+	USE_FALLBACK=`cat $MON_FILE |wc -l`
+	if [ $USE_FALLBACK -le 4 ]; then
+		FILE=$FMON_FILE
 		echo "we are using the fallback file, as tcmalloc statistics were not collected" | tee -a $RUN_LOG
 	fi
 	RES=`cat $FILE | awk -F "." '{print $1}' | sort -n | uniq | tail -n 1`
