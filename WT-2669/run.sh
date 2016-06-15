@@ -20,9 +20,11 @@ SUITE=$RUNDIR/suite
 LOGDIR=$RUNDIR/log
 RUN_LOG=$LOGDIR/run.log
 MON_FILE=$LOGDIR/monitor.log
+FMON_FILE=$LOGDIR/fallback-monitor.log
 BASELINE_FILE=$SUITE/baseline.out
 RUN_PERF_FILE=$LOGDIR/perf_final.log
 MON_PID=0
+FMON_PID=0
 FRAG_LIMIT=50
 PERF_LIMIT=0.1
 TIMER=0
@@ -55,11 +57,11 @@ function pass_args {
 	fi
 	for var in "$@"
 	do
-		case $var in 
+		case $var in
 		--suites*)
 			SUITES=`echo $var | awk -F= '{print $2}'`
 			IFS=', ' read -r -a array <<< "$SUITES"
-			for suite in "${array[@]}"	
+			for suite in "${array[@]}"
 			do
 				case $suite in
 				ycsb)
@@ -73,7 +75,7 @@ function pass_args {
 					;;
 				*)
 					print_help
-					;;	
+					;;
 				esac
 			done
 			;;
@@ -104,11 +106,11 @@ function get_repos {
 	fi
 }
 
-# Pull down git repo and compile 
+# Pull down git repo and compile
 function make_mongo {
 	# We compile only when requested
 	if [ $COMPILE -ne 0 ]; then
-		cd $MONGO_SOURCE 
+		cd $MONGO_SOURCE
 		git checkout master
 		# Update wiredtiger code can be added here
 		scons -j10 core --disable-warnings-as-errors
@@ -139,9 +141,9 @@ function check_mongo {
 	cp -rp $DBPATH/diagnostic.data $LOGDIR/$1-diag
 	RES=`ps -ef | grep mongod | grep -v grep | wc -l`
 	if [ $RES -eq 0 ]; then
-	        echo "Test for $1 failed" | tee -a $RUN_LOG
-	        echo "Test failed as MongoDB crashed, potentially due to OOM killer" | tee -a $RUN_LOG
-	        #exit 1
+		echo "Test for $1 failed" | tee -a $RUN_LOG
+		echo "Test failed as MongoDB crashed, potentially due to OOM killer" | tee -a $RUN_LOG
+		#exit 1
 	fi
 
 }
@@ -151,8 +153,11 @@ function start_monitor {
 	if [ -f $MON_FILE ]; then
 		rm $MON_FILE
 	fi
+	if [ -f $FMON_FILE ]; then
+		rm $FMON_FILE
+	fi
 	$MONGODIR/mongo > $MON_FILE --quiet --eval \
-        "while(true) {
+	"while(true) {
 		var out = db.serverStatus({tcmalloc:1});
 		var heapsize = out.tcmalloc.generic.heap_size;
 		var allocated = out.tcmalloc.generic.current_allocated_bytes;
@@ -162,29 +167,47 @@ function start_monitor {
 	MON_PID=$!
 	# Supress the terminated messages
 	disown
-	$MONGODIR/mongo > $MON_FILE.jemalloc --quiet --eval \
-	"while(true) {                                                          
-                var out = db.serverStatus({tcmalloc:1});                        
-                var heapsize = out.mem.resident*1024*1024;                  
-                var allocated = out.wiredtiger.cache['bytes currently in the cache'];   
-                print((heapsize-allocated)/allocated*100);                      
-                sleep(1000*1);                                                  
-        }" &
+	# We also create a "fallback" monitor incase we are not using tcmalloc
+	# This monitor is less accurate, and needs to wait for the first few seconds
+	# of a run before we can execute - otherwise its stats are really skewed. The
+	# stats are naturally "inflated" anyway, as the resident value we use to compare
+	# inclues a number of objects that don't contribute to the cache memory footprint.
+	$MONGODIR/mongo > $FMON_FILE --quiet --eval \
+	"sleep(1000*10);
+	 while(true) {
+		var out = db.serverStatus({tcmalloc:1});
+		var heapsize = out.mem.resident*1024*1024;
+		var allocated = out.wiredtiger.cache['bytes currently in the cache'];
+		print((heapsize-allocated)/allocated*100);
+		sleep(1000*1);
+	}" &
+	FMON_PID=$!
+	disown
 }
 
 # Stop the Monitor thread
 function stop_monitor {
-	kill $MON_PID
+	kill $MON_PID $FMON_PID
 }
 
 # Check if the monitor file shows that we have exceeded the expected fragmentation limit
 # This is the FRAG_LIMIT global variable
 function check_monitor {
+	FILE=$MON_FILE
 	if [ ! -f $MON_FILE ]; then
 		echo "ERROR: Monitor file $MON_FILE, not found." | tee -a $RUN_LOG
 		#exit 1;
 	fi
-	RES=`cat $MON_FILE | awk -F "." '{print $1}' | sort -n | uniq | tail -n 1`
+	if [ ! -f $FMON_FILE ]; then
+		echo "ERROR: Monitor file $FMON_FILE, not found." | tee -a $RUN_LOG
+		#exit 1;
+	fi
+	USE_FALLBACK=`wc -l $MON_FILE`
+	if [ $USE_FALLBACK -le 2 ]; then
+		$FILE=$FMON_FILE
+		echo "we are using the fallback file, as tcmalloc statistics were not collected" | tee -a $RUN_LOG
+	fi
+	RES=`cat $FILE | awk -F "." '{print $1}' | sort -n | uniq | tail -n 1`
 	if [ $RES -ge $FRAG_LIMIT ]; then
 		echo "Fragmentation over limit for test $1. Max recorded fragmentation is $RES" | tee -a $RUN_LOG
 		#exit 1;
@@ -210,35 +233,35 @@ function end_timer {
 	echo "Run took: $((TIMER_END-TIMER))s" | tee -a $RUN_LOG
 }
 
-# Run Evergreen stuff to gether 
+# Run Evergreen stuff to gether
 function gather_baseline {
-        echo "Starting Evergreen Baseline" | tee -a $RUN_LOG
-        echo "Starting a mongo-perf baseline" | tee -a $RUN_LOG
+	echo "Starting Evergreen Baseline" | tee -a $RUN_LOG
+	echo "Starting a mongo-perf baseline" | tee -a $RUN_LOG
 	if [ -d $MONGO_BASE/bin ]; then
 		MONGO_BASE=$MONGO_BASE/bin
 	fi
-        # mongo-perf run
-        clean_mongod
-        start_mongod $MONGO_BASE
-        start_timer
-        cd $RUNDIR/mongo-perf
-        stdbuf -oL python benchrun.py --shell $MONGO_BASE/mongo -t 1 8 --trialCount 1 \
-                -f testcases/*.js --includeFilter insert misc update query \
-                --includeFilter core regression --excludeFilter single_threaded \
-                --out $LOGDIR/perf_baseline.json --exclude-testbed > $LOGDIR/mongo-perf-baseline.log 2>&1
-        cd $RUNDIR
-        end_timer
-        check_mongo "mongo-perf-baseline"
-
-        echo "Starting a sys-perf baseline" | tee -a $RUN_LOG
-        clean_mongod
-        start_mongod $MONGO_BASE
-        start_timer
-        cd $RUNDIR/workloads
-        stdbuf -oL python run_workloads.py --shell $MONGO_BASE/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf-baseline.log
+	# mongo-perf run
+	clean_mongod
+	start_mongod $MONGO_BASE
+	start_timer
+	cd $RUNDIR/mongo-perf
+	stdbuf -oL python benchrun.py --shell $MONGO_BASE/mongo -t 1 8 --trialCount 1 \
+		-f testcases/*.js --includeFilter insert misc update query \
+		--includeFilter core regression --excludeFilter single_threaded \
+		--out $LOGDIR/perf_baseline.json --exclude-testbed > $LOGDIR/mongo-perf-baseline.log 2>&1
 	cd $RUNDIR
-        end_timer
-        check_mongo "sys-perf-baseline"
+	end_timer
+	check_mongo "mongo-perf-baseline"
+
+	echo "Starting a sys-perf baseline" | tee -a $RUN_LOG
+	clean_mongod
+	start_mongod $MONGO_BASE
+	start_timer
+	cd $RUNDIR/workloads
+	stdbuf -oL python run_workloads.py --shell $MONGO_BASE/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf-baseline.log
+	cd $RUNDIR
+	end_timer
+	check_mongo "sys-perf-baseline"
 	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGO_BASE; ./mongod --version | grep git | awk '{print $3}'; cd $RUNDIR`" $LOGDIR/mongo-perf-baseline.log > $BASELINE_FILE
 	egrep ">>>" $LOGDIR/sys-perf-baseline.log >> $BASELINE_FILE
 }
@@ -288,12 +311,12 @@ if [ $LOCAL -ne 0 ]; then
 	echo "SERVER-23333" | tee -a $RUN_LOG
 	cd $MONGO_SOURCE
 	# The resmoke scripts' --mongo and --mongod options are broken, work around this
-        if [ "$MONGO_SOURCE" != "$MONGODIR" ]; then
-                cp $MONGODIR/mongo $MONGO_SOURCE
-                cp $MONGODIR/mongod $MONGO_SOURCE
-        fi
-        start_timer
-        stdbuf -oL python buildscripts/resmoke.py --dbpathPrefix=$LOGDIR --executor=no_passthrough_with_mongod $SUITE/SERVER-23333.js --log=file > $LOGDIR/SERVER-23333.log 2>&1
+	if [ "$MONGO_SOURCE" != "$MONGODIR" ]; then
+		cp $MONGODIR/mongo $MONGO_SOURCE
+		cp $MONGODIR/mongod $MONGO_SOURCE
+	fi
+	start_timer
+	stdbuf -oL python buildscripts/resmoke.py --dbpathPrefix=$LOGDIR --executor=no_passthrough_with_mongod $SUITE/SERVER-23333.js --log=file > $LOGDIR/SERVER-23333.log 2>&1
 	RES=$?
 	end_timer
 	if [ $RES -ne 0 ]; then
@@ -378,27 +401,27 @@ if [ $EVG -ne 0 ]; then
 	echo "Starting a mongo-perf run" | tee -a $RUN_LOG
 	# mongo-perf run
 	clean_mongod
-        start_mongod $MONGODIR
-        start_timer
+	start_mongod $MONGODIR
+	start_timer
 	cd $RUNDIR/mongo-perf
 	stdbuf -oL python benchrun.py --shell $MONGODIR/mongo -t 1 8 --trialCount 1 \
-                -f testcases/*.js --includeFilter insert misc update query \
-                --includeFilter core regression --excludeFilter single_threaded \
-                --out $LOGDIR/perf.json --exclude-testbed > $LOGDIR/mongo-perf.log 2>&1
+		-f testcases/*.js --includeFilter insert misc update query \
+		--includeFilter core regression --excludeFilter single_threaded \
+		--out $LOGDIR/perf.json --exclude-testbed > $LOGDIR/mongo-perf.log 2>&1
 	cd $RUNDIR
 	end_timer
 	check_mongo "mongo-perf"
 
 	echo "Starting a sys-perf run" | tee -a $RUN_LOG
 	clean_mongod
-        start_mongod $MONGODIR
-        start_timer
+	start_mongod $MONGODIR
+	start_timer
 	cd $RUNDIR/workloads
 	stdbuf -oL python run_workloads.py --shell $MONGODIR/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf.log
 	cd $RUNDIR
-        end_timer
-        check_mongo "sys-perf"
+	end_timer
+	check_mongo "sys-perf"
 	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGODIR; ./mongod --version | grep git | awk '{print $3}'; cd ..`" $LOGDIR/mongo-perf.log > $RUN_PERF_FILE
-        egrep ">>>" $LOGDIR/sys-perf.log >> $RUN_PERF_FILE
+	egrep ">>>" $LOGDIR/sys-perf.log >> $RUN_PERF_FILE
 	compare_perf
 fi
