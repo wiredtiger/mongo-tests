@@ -207,7 +207,7 @@ function check_monitor {
 		FILE=$FMON_FILE
 		echo "we are using the fallback file, as tcmalloc statistics were not collected" | tee -a $RUN_LOG
 	fi
-	RES=`cat $FILE | awk -F "." '{print $1}' | sort -n | uniq | tail -n 1`
+	RES=`cat $FILE | grep -v T | awk -F "." '{print $1}' | sort -n | uniq | tail -n 1`
 	if [ $RES -ge $FRAG_LIMIT ]; then
 		echo "Fragmentation over limit for test $1. Max recorded fragmentation is $RES" | tee -a $RUN_LOG
 		#exit 1;
