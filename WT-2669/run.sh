@@ -166,7 +166,6 @@ function start_mongod {
 # MongoDB should still be running when this is called. Check if it crashed - we expect that the
 # OOMKiller may get involved here!
 function check_mongo {
-	cp -rp $DBPATH/diagnostic.data $LOGDIR/$1-diag
 	RES=`ps -ef | grep mongod | grep -v grep | wc -l`
 	if [ $RES -eq 0 ]; then
 		echo "Test for $1 failed" | tee -a $RUN_LOG
@@ -219,9 +218,9 @@ function stop_monitor {
 }
 
 function save_outputs {
-	cp $MON_FILE $1.monitor.out
-	cp $FMON_FILE $1.monitor.fallback
-	cp -rp $DBPATH/diagnostic.data $1.diagnostic.data
+	cp $MON_FILE $LOGDIR/$1.monitor.out
+	cp $FMON_FILE $LOGDIR/$1.monitor.fallback
+	cp -rp $DBPATH/diagnostic.data $LOGDIR/$1.diagnostic.data
 }
 
 # Check if the monitor file shows that we have exceeded the expected fragmentation limit
