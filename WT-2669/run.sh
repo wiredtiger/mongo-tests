@@ -1,28 +1,18 @@
 #!/bin/bash
 
 #Steering Variables
-RUNDIR=`pwd`
+BASE=`pwd`
 
 ## Defaults for user variables
-# The mongodb version to use for tests if not compiling
-MONGODIR=$RUNDIR/newer_build/mongodb-linux-x86_64-3.3.8-21-g2559d31
-# The mongodb version to use for baseline if not compiling
-MONGO_BASE=$RUNDIR/default_build/mongodb-linux-x86_64-3.3.6-229-ge533634
 # The path to the YCSB binary
 YCSB_BIN=~/work/jira/w2669/YCSB/bin/ycsb
 # The size of the WT cache to use in GBs, 0 is system default
-CACHE_SIZE=5
+CACHE_SIZE=0
 
 # The following shouldn't need to be changed.
-MONGO_SOURCE=$RUNDIR/mongo-source
-DBPATH=$MONGODIR/db
-SUITE=$RUNDIR/suite
-LOGDIR=$RUNDIR/log
-RUN_LOG=$LOGDIR/run.log
-MON_FILE=$LOGDIR/monitor.log
-FMON_FILE=$LOGDIR/fallback-monitor.log
+MONGO_SOURCE=$BASE/mongo-source
+SUITE=$BASE/suite
 BASELINE_FILE=$SUITE/baseline.out
-RUN_PERF_FILE=$LOGDIR/perf_final.log
 MON_PID=0
 FMON_PID=0
 FRAG_LIMIT=50
@@ -30,28 +20,43 @@ PERF_LIMIT=0.1
 TIMER=0
 PERF_FAILED=0
 
+# Globals needing later initialisation
+RUNDIR=0
+MONGODIR=0
+DBPATH=0
+LOGDIR=0
+RUN_LOG=0
+MON_FILE=0
+FMON_FILE=0
+RUN_PERF_FILE=0
+
+# The sysperf workloads we are to run
 SYSPERF_WORKLOADS="contended_update.js insert_capped_indexes.js insert_capped.js insert_ttl.js jtrue.js"
 
 # Suites
-YCSB=0
-LOCAL=0
-EVG=0
+YCSB=1
+LOCAL=1
+EVG=1
 BASELINE=0
 COMPILE=0
+BINARY=""
+
+
+function reset_variables {
+	LOGDIR=$RUNDIR/log
+	RUN_LOG=$LOGDIR/run.log
+	MON_FILE=$LOGDIR/monitor.log
+	FMON_FILE=$LOGDIR/fallback-monitor.log
+	RUN_PERF_FILE=$LOGDIR/perf_final.log
+}
 
 function print_help {
-	echo "run.sh --suites=[local,ycsb,evg] --baseline"
+	echo "run.sh --suites=[local,ycsb,evg] --compile|--binary=<link-to-s3.tgz> [--baseline]"
 	exit 1;
 }
 
 function pass_args {
 	# If we have no args, run the whole shebang
-	if [ "$1" == "" ]; then
-		YCSB=1
-		LOCAL=1
-		EVG=1
-		return
-	fi
 	if [ "$1" == "--help" ]; then
 		print_help
 	fi
@@ -59,6 +64,9 @@ function pass_args {
 	do
 		case $var in
 		--suites*)
+			LOCAL=0
+			YCSB=0
+			EVG=0
 			SUITES=`echo $var | awk -F= '{print $2}'`
 			IFS=', ' read -r -a array <<< "$SUITES"
 			for suite in "${array[@]}"
@@ -82,6 +90,7 @@ function pass_args {
 		--baseline)
 			if [ -f $BASELINE_FILE ]; then
 				echo "Baseline file exists. To re-gather please delete $BASELINE_FILE and re-run." | tee -a $RUN_LOG
+				exit 1
 			else
 				echo "Warning: Baseline gathering can take some time, so be prepared to wait" | tee -a $RUN_LOG
 				BASELINE=1
@@ -90,7 +99,9 @@ function pass_args {
 		--compile)
 			COMPILE=1
 			MONGODIR=$MONGO_SOURCE
-			MONGO_BASE=$MONGO_SOURCE
+			;;
+		--binary*)
+			BINARY=`echo $var | awk -F= '{print $2}'`
 			;;
 		*)
 			print_help
@@ -99,23 +110,40 @@ function pass_args {
 }
 
 function get_repos {
+	cd $BASE
 	git clone https://github.com/mongodb/mongo.git $MONGO_SOURCE 2>&1
 	if [ $((EVG+BASELINE)) -ne 0 ]; then
 		git clone git@github.com:10gen/workloads.git 2>&1
 		git clone https://github.com/mongodb/mongo-perf 2>&1
 	fi
+	cd $RUNDIR
 }
 
 # Pull down git repo and compile
-function make_mongo {
-	# We compile only when requested
+function setup_mongo {
 	if [ $COMPILE -ne 0 ]; then
+		MONGODIR=$MONGO_SOURCE
 		cd $MONGO_SOURCE
-		git checkout master
 		# Update wiredtiger code can be added here
 		scons -j10 core --disable-warnings-as-errors
-		cd ..
+		cd $RUNDIR
+		echo "Running with compiled binary. GitHash: `$MONGODIR/mongod --version | grep git`" >> $RUN_LOG
+		return
 	fi
+	if [ ! -z $BINARY ]; then
+		cd $RUNDIR
+		wget $BINARY
+		tar=`ls *.tgz`
+		tar -xvf $tar
+		rm $tar
+		MONGODIR=$RUNDIR/`ls |grep mongo*`
+		echo "Running with downloaded binary. GitHash: `$MONGODIR/bin/mongod --version | grep git`" >> $RUN_LOG
+		echo "Binary downloaded from: $BINARY" >> $RUN_LOG
+		return
+	fi
+	rm -rf $RUNDIR
+	echo "You did not specify --binary or --compile"
+	exit 1;
 }
 # Stop and MongoDB instances, cleanup the dbapth
 function clean_mongod {
@@ -190,9 +218,16 @@ function stop_monitor {
 	kill $MON_PID $FMON_PID
 }
 
+function save_outputs {
+	cp $MON_FILE $1.monitor.out
+	cp $FMON_FILE $1.monitor.fallback
+	cp -rp $DBPATH/diagnostic.data $1.diagnostic.data
+}
+
 # Check if the monitor file shows that we have exceeded the expected fragmentation limit
 # This is the FRAG_LIMIT global variable
 function check_monitor {
+	save_outputs $1
 	FILE=$MON_FILE
 	if [ ! -f $MON_FILE ]; then
 		echo "ERROR: Monitor file $MON_FILE, not found." | tee -a $RUN_LOG
@@ -237,15 +272,12 @@ function end_timer {
 function gather_baseline {
 	echo "Starting Evergreen Baseline" | tee -a $RUN_LOG
 	echo "Starting a mongo-perf baseline" | tee -a $RUN_LOG
-	if [ -d $MONGO_BASE/bin ]; then
-		MONGO_BASE=$MONGO_BASE/bin
-	fi
 	# mongo-perf run
 	clean_mongod
-	start_mongod $MONGO_BASE
+	start_mongod $MONGODIR
 	start_timer
-	cd $RUNDIR/mongo-perf
-	stdbuf -oL python benchrun.py --shell $MONGO_BASE/mongo -t 1 8 --trialCount 1 \
+	cd $BASE/mongo-perf
+	stdbuf -oL python benchrun.py --shell $MONGODIR/mongo -t 1 8 --trialCount 1 \
 		-f testcases/*.js --includeFilter insert misc update query \
 		--includeFilter core regression --excludeFilter single_threaded \
 		--out $LOGDIR/perf_baseline.json --exclude-testbed > $LOGDIR/mongo-perf-baseline.log 2>&1
@@ -255,14 +287,14 @@ function gather_baseline {
 
 	echo "Starting a sys-perf baseline" | tee -a $RUN_LOG
 	clean_mongod
-	start_mongod $MONGO_BASE
+	start_mongod $MONGODIR
 	start_timer
-	cd $RUNDIR/workloads
-	stdbuf -oL python run_workloads.py --shell $MONGO_BASE/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf-baseline.log
+	cd $BASE/workloads
+	stdbuf -oL python run_workloads.py --shell $MONGODIR/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf-baseline.log
 	cd $RUNDIR
 	end_timer
 	check_mongo "sys-perf-baseline"
-	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGO_BASE; ./mongod --version | grep git | awk '{print $3}'; cd $RUNDIR`" $LOGDIR/mongo-perf-baseline.log > $BASELINE_FILE
+	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGODIR; ./mongod --version | grep git | awk '{print $3}'; cd $RUNDIR`" $LOGDIR/mongo-perf-baseline.log > $BASELINE_FILE
 	egrep ">>>" $LOGDIR/sys-perf-baseline.log >> $BASELINE_FILE
 }
 
@@ -281,19 +313,23 @@ function compare_perf {
 # - The equivalent of the evergreen performance and sys-perf suites
 
 # Basic setup stuff
-rm -rf $LOGDIR
+if [ ! -d $BASE/runs ]; then
+	mkdir $BASE/runs
+fi
+RUNDIR=$BASE/runs/run-`date '+%Y%m%d-%H%M%S'`
+mkdir $RUNDIR
+cd $RUNDIR
+reset_variables
 mkdir $LOGDIR
 touch $RUN_LOG
 pass_args $@
 echo "Performing setup" | tee -a $RUN_LOG
+get_repos > $LOGDIR/fetch.log
+setup_mongo > $LOGDIR/make.log
+DBPATH=$MONGODIR/db
 if [ -d $MONGODIR/bin ]; then
 	MONGODIR=$MONGODIR/bin
 fi
-
-# First we grab all the repos we need to run these tests
-get_repos > $LOGDIR/fetch.log
-# Now we make MongoDB
-make_mongo > $LOGDIR/make.log
 
 # Gather a baseline for perf analysis
 if [ $BASELINE -ne 0 ]; then
@@ -302,6 +338,7 @@ if [ $BASELINE -ne 0 ]; then
 		cp $BASELINE_FILE $BASELINE_FILE.bkp
 	fi
 	gather_baseline
+	exit 
 fi
 
 # Run the suites, if selected
@@ -403,7 +440,7 @@ if [ $EVG -ne 0 ]; then
 	clean_mongod
 	start_mongod $MONGODIR
 	start_timer
-	cd $RUNDIR/mongo-perf
+	cd $BASE/mongo-perf
 	stdbuf -oL python benchrun.py --shell $MONGODIR/mongo -t 1 8 --trialCount 1 \
 		-f testcases/*.js --includeFilter insert misc update query \
 		--includeFilter core regression --excludeFilter single_threaded \
@@ -416,7 +453,7 @@ if [ $EVG -ne 0 ]; then
 	clean_mongod
 	start_mongod $MONGODIR
 	start_timer
-	cd $RUNDIR/workloads
+	cd $BASE/workloads
 	stdbuf -oL python run_workloads.py --shell $MONGODIR/mongo -w $SYSPERF_WORKLOADS > $LOGDIR/sys-perf.log
 	cd $RUNDIR
 	end_timer
