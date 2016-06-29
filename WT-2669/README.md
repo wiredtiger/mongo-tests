@@ -15,7 +15,7 @@ This will gather the baseline for any evergreen performance comparisons. This ca
 ## Step 3
 `sh run.sh`
 This should generate output that looks like the following
-`
+```
 Performing setup
 Starting local worklaods
 SERVER-23333
@@ -30,7 +30,7 @@ Fragmentation over limit for test SERVER-20306. Max recorded fragmentation is 15
 Starting SERVER-22906
 Run took: 142s
 Fragmentation over limit for test SERVER-22906. Max recorded fragmentation is 57
-`
+```
 
 Note that the start of each run is listed and the highest recorded fragmentation value for said run is reported if this value exceeds the threshold.
 
