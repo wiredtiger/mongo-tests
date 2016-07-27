@@ -8,7 +8,7 @@
     var conn = MongoRunner.runMongod({
         syncdelay: "0",
         storageEngine: "wiredTiger",
-        wiredTigerCacheSizeGB: "1.0",
+        wiredTigerCacheSizeGB: "1",
         nojournal: ""
     });
     var allocatorFragmentationDB = conn.getDB("allocatorFragmentation");

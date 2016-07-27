@@ -5,7 +5,7 @@ BASE=`pwd`
 
 ## Defaults for user variables
 # The path to the YCSB binary
-YCSB_BIN=~/work/jira/w2669/YCSB/bin/ycsb
+YCSB_BIN=~/work/ycsb/bin/ycsb
 # The size of the WT cache to use in GBs, 0 is system default
 CACHE_SIZE=0
 
@@ -13,6 +13,7 @@ CACHE_SIZE=0
 MONGO_SOURCE=$BASE/mongo-source
 SUITE=$BASE/suite
 BASELINE_FILE=$SUITE/baseline.out
+BASELINE_YCSB_FILE=$SUITE/ycsb_baseline.out
 MON_PID=0
 FMON_PID=0
 FRAG_LIMIT=50
@@ -90,6 +91,9 @@ function pass_args {
 		--baseline)
 			if [ -f $BASELINE_FILE ]; then
 				echo "Baseline file exists. To re-gather please delete $BASELINE_FILE and re-run." | tee -a $RUN_LOG
+				exit 1
+			elif [ -f $BASELINE_YCSB_FILE ]; then
+				echo "Baseline file exists. To re-gather please delete $BASELINE_YCSB_FILE and re-run." | tee -a $RUN_LOG
 				exit 1
 			else
 				echo "Warning: Baseline gathering can take some time, so be prepared to wait" | tee -a $RUN_LOG
@@ -267,6 +271,15 @@ function end_timer {
 	echo "Run took: $((TIMER_END-TIMER))s" | tee -a $RUN_LOG
 }
 
+function gather_ycsb_perf {
+	THROUGHPUT=`grep OVERALL $1 | grep Through | awk '{print $3}'`
+	echo "Throughput for $2 is $THROUGHPUT"
+	BASE=`grep $2 $BASELINE_YCSB_FILE | awk '{ print $2 }'`
+	if [ "$(echo $THROUGHPUT '<' $BASE*.09 | bc -l)" -eq 1 ];then
+		echo "Perf compare failed for $2"
+	fi
+}
+
 # Run Evergreen stuff to gether
 function gather_baseline {
 	echo "Starting Evergreen Baseline" | tee -a $RUN_LOG
@@ -295,6 +308,45 @@ function gather_baseline {
 	check_mongo "sys-perf-baseline"
 	egrep -v "Finished|mongoPerf|version|connecting|load|^$|`cd $MONGODIR; ./mongod --version | grep git | awk '{print $3}'; cd $RUNDIR`" $LOGDIR/mongo-perf-baseline.log > $BASELINE_FILE
 	egrep ">>>" $LOGDIR/sys-perf-baseline.log >> $BASELINE_FILE
+}
+
+function save_ycsb_perf {
+        THROUGHPUT=`grep OVERALL $1 | grep Through | awk '{print $3}'`
+        echo "$2 $THROUGHPUT" >> $BASELINE_YCSB_FILE 
+}
+
+function gather_ycsb_baseline {
+	echo "Starting YCSB Baseline" | tee -a $RUN_LOG
+	echo "Starting SERVER-24207" | tee -a $RUN_LOG
+        clean_mongod
+        start_mongod $MONGODIR SERVER-24207
+        start_monitor
+        start_timer
+        load_ycsb $SUITE/SERVER-24207.ycsb > $LOGDIR/SERVER-24207-load.log
+        end_timer
+        stop_monitor
+        save_ycsb_perf $LOGDIR/SERVER-24207-load.log "SERVER-24207"
+        check_mongo "SERVER-24207"
+        check_monitor "SERVER-24207"
+
+        # Custom smalldoc's workload for this suite
+        echo "Starting WT-2669" | tee -a $RUN_LOG
+        clean_mongod
+        start_mongod $MONGODIR WT-2669
+        start_monitor
+        start_timer
+        load_ycsb $SUITE/WT-2669.ycsb > $LOGDIR/WT-2669-load.log
+        stop_monitor
+        save_ycsb_perf $LOGDIR/WT-2669-load.log "WT-2669-load"
+        check_monitor "WT-2669-load"
+        start_monitor
+        check_mongo "WT-2669-load"
+        run_ycsb $SUITE/WT-2669.ycsb > $LOGDIR/WT-2669-run.log
+        end_timer
+        stop_monitor
+        save_ycsb_perf $LOGDIR/WT-2669-run.log "WT-2669-run"
+        check_mongo "WT-2669-run"
+        check_monitor "WT-2669-run"
 }
 
 # Compare this runs perf to the baseline
@@ -336,6 +388,10 @@ if [ $BASELINE -ne 0 ]; then
 	if [ -f $BASELINE_FILE ]; then
 		cp $BASELINE_FILE $BASELINE_FILE.bkp
 	fi
+        if [ -f $BASELINE_YCSB_FILE ]; then
+                cp $BASELINE_YCSB_FILE $BASELINE_YCSB_FILE.bkp
+        fi
+	gather_ycsb_baseline
 	gather_baseline
 	exit 
 fi
@@ -406,6 +462,7 @@ if [ $YCSB -ne 0 ]; then
 	load_ycsb $SUITE/SERVER-24207.ycsb > $LOGDIR/SERVER-24207-load.log
 	end_timer
 	stop_monitor
+	gather_ycsb_perf $LOGDIR/SERVER-24207-load.log "SERVER-24207"
 	check_mongo "SERVER-24207"
 	check_monitor "SERVER-24207"
 
@@ -417,12 +474,14 @@ if [ $YCSB -ne 0 ]; then
 	start_timer
 	load_ycsb $SUITE/WT-2669.ycsb > $LOGDIR/WT-2669-load.log
 	stop_monitor
+	gather_ycsb_perf $LOGDIR/WT-2669-load.log "WT-2669-load"
 	check_monitor "WT-2669-load"
 	start_monitor
 	check_mongo "WT-2669-load"
 	run_ycsb $SUITE/WT-2669.ycsb > $LOGDIR/WT-2669-run.log
 	end_timer
 	stop_monitor
+	gather_ycsb_perf $LOGDIR/WT-2669-run.log "WT-2669-run"
 	check_mongo "WT-2669-run"
 	check_monitor "WT-2669-run"
 fi
