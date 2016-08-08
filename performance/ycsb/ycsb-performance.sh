@@ -97,7 +97,8 @@ function run_ycsb
 
 function save_diagdata
 {
-	cp -rp $DATA_DIR/diagnostic.data  $OUTPUT_DIR/$1-$2.diagdata
+	echo "Saving diagnostic.data to $OUTPUT_DIR/$1.diagdata"
+	cp -rp $DATA_DIR/diagnostic.data  $OUTPUT_DIR/$1.diagdata
 }
 
 if [ ! -d $LOG_DIR ]; then
@@ -117,7 +118,6 @@ do
     if [ ! -d $dataset ]; then
         run_ycsb $dataset $workload_name load
         run_ycsb $dataset $workload_name run
-	save_diagdata $workload_name all
     else
         # The dataset is a directory of various workloads
         needs_load=true
@@ -128,13 +128,12 @@ do
             if [ "$needs_load" = true ]; then
                 run_ycsb $workload $workload_name load
                 needs_load=false
-		save_diagdata $workload_name load
             fi
 
             run_ycsb $workload $workload_name run
-	    save_diagdata $workload_name run
         done
     fi
+    save_diagdata $workload_name
 done
 
 cleanup
