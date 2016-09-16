@@ -8,11 +8,13 @@ SUITES=`ls $SUITE_DIR`
 MODE="existing"
 RUNS_DIR=$TOP_DIR/runs
 RUN_DIR=""
+RUN_OVERRIDE=""
 
 
 function do_help 
 {
 	echo "$0 --suites=<suites> --mongo=[compile|<url>|existing]"
+	exit 0
 }
 
 function setup_mongo
@@ -36,7 +38,7 @@ function setup_mongo
 		MONGODIR=$RUNDIR/`ls |grep mongo*`
 		mv $MONGODIR/bin/* $MONGO_DIR
 		
-	fi	
+	fi
 	if ! [ -f $MONGO_DIR/mongo ]; then
 		echo "Error, no mongo shell found in $MONGO_DIR"
 		RET=1
@@ -90,6 +92,9 @@ do
 	--mongo*)
 		MODE=`echo $var|awk -F= '{print $2}'`
 	;;
+	--runname*)
+		RUN_OVERRIDE=`echo $var|awk -F= '{print $2}'`
+	;;
 	--help)
 		do_help
 	;;
@@ -106,7 +111,14 @@ if [ -d $DBPATH ]; then
 fi
 mkdir $DBPATH
 setup_mongo $MODE
-RUNS_DIR="$RUNS_DIR/`date '+%Y%m%d-%H%M%S'`"
+
+# If we're naming the run, use that here
+if [ $RUN_OVERRIDE == "" ]; then
+	RUNS_DIR="$RUNS_DIR/`date '+%Y%m%d-%H%M%S'`"
+else
+	RUNS_DIR="$RUNS_DIR/$RUN_OVERRIDE"
+fi
+
 mkdir $RUNS_DIR
 for suite in $SUITES
 do
