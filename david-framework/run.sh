@@ -29,13 +29,14 @@ function setup_mongo
 		scons -j10 core --disable-warnings-as-errors
 		cd $TOP_DIR
 	fi
-	if [ $1 == "http*" ]; then
+	if [[ $1 =~ http.* ]]; then
+		mkdir $MONGO_DIR
 		wget $1 -O mongo.tgz
 		mv mongo.tgz $MONGO_DIR
 		cd $MONGO_DIR
 		tar -xzvf mongo.tgz
 		rm mongo.tgz
-		MONGODIR=$RUNDIR/`ls |grep mongo*`
+		MONGODIR=`ls |grep mongo*`
 		mv $MONGODIR/bin/* $MONGO_DIR
 		
 	fi
