@@ -114,7 +114,7 @@ mkdir $DBPATH
 setup_mongo $MODE
 
 # If we're naming the run, use that here
-if [ $RUN_OVERRIDE == "" ]; then
+if [ "$RUN_OVERRIDE" == "" ]; then
 	RUNS_DIR="$RUNS_DIR/`date '+%Y%m%d-%H%M%S'`"
 else
 	RUNS_DIR="$RUNS_DIR/$RUN_OVERRIDE"
