@@ -10,6 +10,10 @@ strcit_skips = [
     "wiredtiger-test-mongodb-3.0",
     "wiredtiger-test-mongodb-3.2"
 ]
+
+email_check_skip = [
+    "wiredtiger-syscall-linux"
+]
 job_dir = "/home/jenkins/jenkins/jobs/"
 def check_recips (recips):
     if recips == None:
@@ -80,7 +84,8 @@ for job in os.listdir(job_dir):
         print("Old Job found - %s" % job)
         continue
     root = xml.etree.ElementTree.parse(config_file).getroot()
-    check_mail(root)
+    if job not in email_check_skip:
+        check_mail(root)
     if job not in strcit_skips:
         if not check_builds(root):
             print("Error; Builder(s) in job %s don't have --enable-strict" % job)
