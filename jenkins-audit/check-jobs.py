@@ -1,5 +1,5 @@
 #! /usr/bin/python
-import xml.etree.ElementTree
+import xml.etree.ElementTree as etree
 import os
 
 strcit_skips = [
@@ -14,6 +14,13 @@ strcit_skips = [
 email_check_skip = [
     "wiredtiger-syscall-linux"
 ]
+
+match_jobs = [
+    ["wiredtiger-test-format-stress-sanitizer", None],
+    ["wiredtiger-test-format-stress-sanitizer-old-branches", None]
+]
+match_jobs_set = False
+
 job_dir = "/home/jenkins/jenkins/jobs/"
 def check_recips (recips):
     if recips == None:
@@ -56,6 +63,25 @@ def check_strict(text):
         return True
     return False
 
+def check_matches(root, job):
+    global match_jobs
+    global match_jobs_set
+    builders = root.find('./builders')
+    if builders == None:
+        print("Error, no builders found in job %s" % job)
+        return False
+    for counter, member in enumerate(match_jobs):
+        if job == match_jobs[counter][0]:
+            match_jobs[counter][1] = etree.tostring(builders)
+
+    if match_jobs_set == False:
+        match_jobs_set = True
+    else:
+        if match_jobs[0][1] != match_jobs[1][1]:
+            print("Error, jobs %s and %s don't match!" % (match_jobs[0][0], match_jobs[1][0]))
+            return False
+    return True
+
 
 def check_builds(root):
     builders = root.find('./builders')
@@ -83,7 +109,10 @@ for job in os.listdir(job_dir):
     if not os.path.exists(config_file):
         print("Old Job found - %s" % job)
         continue
-    root = xml.etree.ElementTree.parse(config_file).getroot()
+    root = etree.parse(config_file).getroot()
+    for match in match_jobs:
+        if job == match[0]:
+            check_matches(root, job)
     if job not in email_check_skip:
         check_mail(root)
     if job not in strcit_skips:
