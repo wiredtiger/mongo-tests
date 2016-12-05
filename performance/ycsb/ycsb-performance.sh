@@ -46,6 +46,7 @@ function print_stats
 function cleanup
 {
     killall -w -9 mongod || true
+    killall -w -9 initandlisten || true
     rm -rf $DATA_DIR
     mkdir $DATA_DIR
 }
