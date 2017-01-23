@@ -30,6 +30,7 @@ def check_recips (recips):
     if email != 'testing@wiredtiger.com' and email != '${ghprbActualCommitAuthorEmail}, testing@wiredtiger.com':
         print("Error, job %s not got testing as the email address, it has %s" % (job, email))
         return True
+
 def check_mail (root):
     # Skip the top multijob processes, they dont send emails
     if root.tag == 'com.tikal.jenkins.plugins.multijob.MultiJobProject':
@@ -46,6 +47,19 @@ def check_mail (root):
         recips = mailer.find("recipients")
     if check_recips(recips):
         return True
+
+def check_email_plots(root, job):
+    mailer = root.find('./publishers/hudson.plugins.emailext.ExtendedEmailPublisher')
+    if mailer == None:
+        return True
+    content = mailer.find("defaultContent")
+    if content == None:
+        return True
+    contentBody = content.text
+    if "Plot:" in contentBody:
+        if not job in contentBody:
+            return False
+    return True
 
 def check_configure(text):
     if "configure" in text:
@@ -118,3 +132,5 @@ for job in os.listdir(job_dir):
     if job not in strcit_skips:
         if not check_builds(root):
             print("Error; Builder(s) in job %s don't have --enable-strict" % job)
+    if not check_email_plots(root, job):
+        print("Error; Email of plots in job %s doesn't have the correct URL" % job)
