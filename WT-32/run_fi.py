@@ -5,12 +5,11 @@ from subprocess import Popen, PIPE
 from collections import namedtuple
 
 DEF_FAULTINJECT_LIBRARY_NAME = '__wt'
-DEF_LD_LIBRARY_PATH = '/home/sulabh/work/fi-lib/.libs:/home/sulabh/work/wt-32/build_posix/.libs'
-DEF_LD_PRELOAD = '/home/sulabh/work/fi-lib/.libs/libfaultinject.so'
-DEF_PYTHON_PATH = '/home/sulabh/work/wt-32/lang/python:/home/sulabh/work/wt-32/build_posix/lang/python:/home/sulabh/work/wt-32/test/suite'
-
-PMP_PATH = '/home/sulabh/work/wt-32/test/suite/pmp.sh'
 CUR_DIR = os.getcwd()
+PMP_PATH = CUR_DIR + '/../test/suite/pmp.sh'
+DEF_PYTHON_PATH = CUR_DIR + '/../lang/python:'
+DEF_PYTHON_PATH += CUR_DIR + '/lang/python:'
+DEF_PYTHON_PATH += CUR_DIR + '/../test/suite'
 FI_TMP_DIR = CUR_DIR + '/FI_TEST/'
 
 verbose = 0
@@ -275,6 +274,7 @@ if __name__ == '__main__':
     read_from_config = False
     dump_config = False
     timeout = 300
+    fi_lib_path = None
 
     # Process arguments passed
     args = sys.argv[1:]
@@ -302,6 +302,9 @@ if __name__ == '__main__':
             if option == '-failcountignore' or option == 'i':
                 fail_count_ignore = [int(s) for s in args.pop(0).split(',')]
                 continue
+            if option == '-filibpath' or option == 'l':
+                fi_lib_path = args.pop(0)
+                continue
             if option == '-proceedonfailure' or option == 'p':
                 proceed_on_failure = True
                 continue
@@ -325,10 +328,20 @@ if __name__ == '__main__':
             sys.exit(2) 
         cmd_list.append(arg)
 
+    if fi_lib_path == None:
+        dbg(0, "Fault injection library path not specified.")
+        sys.exit(2)
+
+    # Set various paths for the test env
+    ld_lib_path = fi_lib_path + '/.libs'
+    ld_lib_path += ':'
+    ld_lib_path += CUR_DIR + '/.libs'
+    ld_preload = fi_lib_path + '/.libs/libfaultinject.so'
+
     testsuite = Testsuite(proceed_on_failure,
         DEF_FAULTINJECT_LIBRARY_NAME,
-        DEF_LD_LIBRARY_PATH,
-        DEF_LD_PRELOAD,
+        ld_lib_path,
+        ld_preload,
         DEF_PYTHON_PATH)
 
     testset_list = []
