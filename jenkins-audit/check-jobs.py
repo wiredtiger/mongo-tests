@@ -12,7 +12,8 @@ strcit_skips = [
 ]
 
 email_check_skip = [
-    "wiredtiger-syscall-linux"
+    "wiredtiger-syscall-linux",
+    "wiredtiger-fault-inject"
 ]
 
 match_jobs = [
@@ -60,6 +61,10 @@ def check_email_plots(root, job):
         if not job in contentBody:
             return False
     return True
+
+def check_clean(text):
+    if "git clean -fdqx -e &apos;*.tgz&apos;" in text:
+        return True
 
 def check_configure(text):
     if "configure" in text:
@@ -112,9 +117,13 @@ def check_builds(root):
             found_compile = True
             if check_strict(command.text):
                 found_strict = True
+        if not check_clean(command.text):
+            print("Error; Builder(s) in job %s don't have git clean" % job)
+
     # If the job doesn't do a WT compile, there is no issue
     if not found_compile:
         return True
+    
     return found_strict
 
 
