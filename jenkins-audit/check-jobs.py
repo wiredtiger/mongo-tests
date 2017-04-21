@@ -20,6 +20,14 @@ match_jobs = [
     ["wiredtiger-test-format-stress-sanitizer", None],
     ["wiredtiger-test-format-stress-sanitizer-old-branches", None]
 ]
+
+clean_skips = [
+    "wiredtiger-pull-request",
+    "jenkins-audit",
+    "wiredtiger-perf-long-jobs",
+    "wiredtiger-perf",
+]
+
 match_jobs_set = False
 
 job_dir = "/home/jenkins/jenkins/jobs/"
@@ -63,7 +71,7 @@ def check_email_plots(root, job):
     return True
 
 def check_clean(text):
-    if "git clean -fdqx -e &apos;*.tgz&apos;" in text:
+    if "clean -fdqx" in text:
         return True
 
 def check_configure(text):
@@ -102,13 +110,15 @@ def check_matches(root, job):
     return True
 
 
-def check_builds(root):
+def check_builds(root, job):
+
     builders = root.find('./builders')
     # Check if this test builds something
     if builders == None:
         return True
     found_compile = False
     found_strict = False
+    found_clean = False
     for b in list(builders):
         command = b.find("./command")
         if command == None:
@@ -117,11 +127,19 @@ def check_builds(root):
             found_compile = True
             if check_strict(command.text):
                 found_strict = True
-        if not check_clean(command.text):
+
+        if check_clean(command.text):
+            found_clean = True
+
+    if job not in clean_skips:
+        if not found_clean:
             print("Error; Builder(s) in job %s don't have git clean" % job)
 
     # If the job doesn't do a WT compile, there is no issue
     if not found_compile:
+        return True
+
+    if job in strcit_skips:
         return True
     
     return found_strict
@@ -138,8 +156,7 @@ for job in os.listdir(job_dir):
             check_matches(root, job)
     if job not in email_check_skip:
         check_mail(root)
-    if job not in strcit_skips:
-        if not check_builds(root):
-            print("Error; Builder(s) in job %s don't have --enable-strict" % job)
+    if not check_builds(root, job):
+        print("Error; Builder(s) in job %s don't have --enable-strict" % job)
     if not check_email_plots(root, job):
         print("Error; Email of plots in job %s doesn't have the correct URL" % job)
