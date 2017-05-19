@@ -53,7 +53,8 @@ def get_last_ops(client):
         last_ops['write_latency'] = res['opLatencies']['writes']['latency']
     last_ops['insert'] = ops['insert']
     last_ops['update'] = ops['update']
-    collections = client[dbname].command('dbstats')['collections']
+    #collections = client[dbname].command('dbstats')['collections']
+    collections = 0
     avg_latency = 0
     if writes > 0:
         avg_latency = write_latency/writes
