@@ -106,7 +106,7 @@ def launch_poc_driver(run_collections):
     docs_per = working_set_docs / run_collections
     FNULL = open(os.devnull, 'w')
     global java_proc
-    command = ("java -jar bin/POCDriver.jar" \
+    command = ("java -jar ../POCDriver/bin/POCDriver.jar" \
                " -i " + str(insert_rate) + 
                " -u " + str(update_rate) +
                " -k " + str(query_rate) +
