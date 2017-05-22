@@ -27,7 +27,7 @@ collection_ramp_size = 500
 collection_ramp_rate = 1.25
 working_set_docs = 1000000
 collections_contents = {}
-output_csv = "out.csv"
+output_csv = "../results/out.csv"
 fail_at_ms = 10
 batch_size = 1
 
