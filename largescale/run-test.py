@@ -7,7 +7,6 @@ import subprocess
 import random
 import datetime
 import csv
-from threading import Thread
 from pymongo import MongoClient
 from bson.binary import Binary
 from loremipsum import get_sentences
@@ -64,57 +63,42 @@ def get_last_ops(client):
 def random_string(length):
     return get_sentences(length)[0]
 
-def populate_single_collection(client, x):
-    docs_per = working_set_docs / collections
-    ns = collname + str(x)
-    collections_contents[x] = docs_per
-    numInBulk = 0
-    bulkSize = 1000
-    bulk = client[dbname][ns].initialize_unordered_bulk_op()
-    str1 = random_string(1)
-    str2 = random_string(1)
-    str3 = random_string(1)
-    str4 = random_string(1)
-    str5 = random_string(1)
-    for y in range(docs_per):
-        if y % bulkSize == 0 and y > 0:
-            bulk.execute()
-            bulk = client[dbname][ns].initialize_unordered_bulk_op()
-
-        bulk.insert({ "_id" : y,
-            "fld0" : random.randint(0,10000000),
-            "fld1" : random.randint(0,10000000),
-            "fld2" : str1,
-            "fld3" : str2,
-            "fld4" : str3,
-            "fld5" : datetime.datetime.now(),
-            "fld6" : random.randint(0,10000000),
-            "fld7" : str4,
-            "fld8" : str5,
-            "fld9" : random.randint(0,10000000),
-            "bin" : Binary("0") })
-
-    bulk.execute()
-    # print("populated " + dbname + "." + ns + " with " + str(docs_per) + " documents")
-
 
 def populate_collections(client, collections):
-    threads = []
-    max_threads=10
-    if collections < 10:
-        max_threads = collections
-    active_threads=0
+    docs_per = working_set_docs / collections
     for x in range(collections):
-        if active_threads == max_threads:
-            for t in threads:
-                t.join()
-                active_threads-=1
         if x not in collections_contents:
-            t = Thread(target=populate_single_collection, args=(client, x));
-            t.start()
-            threads.append(t)
-            active_threads+=1
+            ns = collname + str(x)
+            collections_contents[x] = docs_per
+            numInBulk = 0
+            bulkSize = 1000
+            bulk = client[dbname][ns].initialize_unordered_bulk_op()
+            str1 = random_string(1)
+            str2 = random_string(1)
+            str3 = random_string(1)
+            str4 = random_string(1)
+            str5 = random_string(1)
+            for y in range(docs_per):
+                if y % bulkSize == 0 and y > 0:
+                    bulk.execute()
+                    bulk = client[dbname][ns].initialize_unordered_bulk_op()
 
+                bulk.insert({ "_id" : y,
+                    "fld0" : random.randint(0,10000000),
+                    "fld1" : random.randint(0,10000000),
+                    "fld2" : str1,
+                    "fld3" : str2,
+                    "fld4" : str3,
+                    "fld5" : datetime.datetime.now(),
+                    "fld6" : random.randint(0,10000000),
+                    "fld7" : str4,
+                    "fld8" : str5,
+                    "fld9" : random.randint(0,10000000),
+                    "bin" : Binary("0") })
+
+            bulk.execute()
+           # print("populated " + dbname + "." + ns + " with " + str(docs_per) + " documents")
+                
     # FsyncLock here
     client.admin.command("fsync", lock=False)
 
