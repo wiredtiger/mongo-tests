@@ -1,4 +1,4 @@
-runtime=43200 
+runtime=86400
 insert=0
 update=100
 read=0

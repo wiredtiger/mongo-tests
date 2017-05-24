@@ -29,6 +29,7 @@ working_set_docs = 1000000
 collections_contents = {}
 output_csv = "../results/out.csv"
 fail_at_ms = 10
+fail_at_throughput_factor = 0.75
 batch_size = 1
 
 
@@ -124,7 +125,7 @@ def launch_poc_driver(run_collections):
     java_proc = subprocess.Popen(command, shell=True, stdout=FNULL)
 
 def load_from_config(filename):
-    global insert_rate, update_rate, query_rate, num_collections, total_runtime, time_to_ramp, ramp_interval, worker_threads, gross_throughput, collection_ramp_size, working_set_docs, collection_ramp_rate, fail_at_ms
+    global insert_rate, update_rate, query_rate, num_collections, total_runtime, time_to_ramp, ramp_interval, worker_threads, gross_throughput, collection_ramp_size, working_set_docs, collection_ramp_rate, fail_at_ms, fail_at_throughput_factor
     with open(filename, "r") as f:
         for line in f:
             arr = line.split('=')
@@ -154,6 +155,8 @@ def load_from_config(filename):
                 collection_ramp_rate = float(arr[1])
             if arr[0] == "fail_at_ms":
                 fail_at_ms = int(arr[1])
+            if arr[0] == "fail_at_throughput_factor":
+                fail_at_throughput_factor = float(arr[1])
 
 def gather_avg(colls):
     data = csv.reader(open(output_csv, 'r'), delimiter=",")
@@ -169,7 +172,7 @@ def gather_avg(colls):
             ops[coll_count] += int(row[10])
     #print("Gross latency is " + str(latency[colls]) + ". Gross ops is " + str(ops[colls]))
     #print("Avg latency per op " + str(float(latency[colls])/ops[colls]))
-    return float(latency[colls])/ops[colls]
+    return (float(latency[colls])/ops[colls], ops[colls]/((ramp_interval/10)-1))
 
 
 # Main
@@ -202,12 +205,14 @@ while (go):
         fhandle.flush()
         time.sleep(1)
     res = gather_avg(collections)
-    print("Run completed avg latency with " + str(collections) + " collections is " + str(res) + "ms/op")
+    avg_response_time = res[0]
+    avg_throughput = res[1]
+    print("Run completed avg latency with " + str(collections) + " collections is " + str(avg_response_time) + "ms/op and throughput of " + str(avg_throughput) + "ops/sec")
     collections = int(collections * collection_ramp_rate)
-    if (time.time() - start) > total_runtime:
+    if (time.time() - start) > total_runtime or collections >= num_collections:
         go=False
         passed=0
-    if res > fail_at_ms:
+    if avg_response_time > fail_at_ms or avg_throughput < gross_throughput * fail_at_throughput_factor:
         if fail_run == False:
             fail_run=True
         else:
