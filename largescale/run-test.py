@@ -31,6 +31,7 @@ output_csv = "../results/out.csv"
 fail_at_ms = 10
 fail_at_throughput_factor = 0.75
 batch_size = 1
+oplog = 0
 
 
 runtime = 0
@@ -103,6 +104,11 @@ def populate_collections(client, collections):
     # FsyncLock here
     client.admin.command("fsync", lock=False)
 
+def setup_mongodb(config):
+    if oplog != 0:
+        client.admin.command("replSetInitiate")
+        time.sleep(10)
+
 
 def launch_poc_driver(run_collections):
     docs_per = working_set_docs / run_collections
@@ -125,7 +131,7 @@ def launch_poc_driver(run_collections):
     java_proc = subprocess.Popen(command, shell=True, stdout=FNULL)
 
 def load_from_config(filename):
-    global insert_rate, update_rate, query_rate, num_collections, total_runtime, time_to_ramp, ramp_interval, worker_threads, gross_throughput, collection_ramp_size, working_set_docs, collection_ramp_rate, fail_at_ms, fail_at_throughput_factor
+    global insert_rate, update_rate, query_rate, num_collections, total_runtime, time_to_ramp, ramp_interval, worker_threads, gross_throughput, collection_ramp_size, working_set_docs, collection_ramp_rate, fail_at_ms, fail_at_throughput_factor, oplog
     with open(filename, "r") as f:
         for line in f:
             arr = line.split('=')
@@ -157,6 +163,8 @@ def load_from_config(filename):
                 fail_at_ms = int(arr[1])
             if arr[0] == "fail_at_throughput_factor":
                 fail_at_throughput_factor = float(arr[1])
+            if arr[0] == "oplog":
+                oplog = int(arr[1])
 
 def gather_avg(colls):
     data = csv.reader(open(output_csv, 'r'), delimiter=",")
@@ -180,6 +188,7 @@ if len(sys.argv) > 1:
     load_from_config(sys.argv[1])
 
 client = MongoClient('mongodb://localhost:27017/')
+setup_mongodb(client)
 fhandle = open(output_filename, 'a')
 fhandle.write("time,relative_time,inserts,collections,num_writes,write_latency,average_latency\n")
 start=time.time()
@@ -208,7 +217,7 @@ while (go):
     avg_response_time = res[0]
     avg_throughput = res[1]
     print("Run completed avg latency with " + str(collections) + " collections is " + str(avg_response_time) + "ms/op and throughput of " + str(avg_throughput) + "ops/sec")
-    collections = int(collections * collection_ramp_rate)
+    # Work out if we should finish here.
     if (time.time() - start) > total_runtime or collections >= num_collections:
         go=False
         passed=0
@@ -217,7 +226,7 @@ while (go):
             fail_run=True
         else:
             go=False
-    # Work out if we should bail.
+    collections = int(collections * collection_ramp_rate)
 
 # Close the results file 
 fhandle.close()
