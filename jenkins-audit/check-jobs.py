@@ -1,6 +1,7 @@
 #! /usr/bin/python
 import xml.etree.ElementTree as etree
 import os
+import re
 
 strcit_skips = [
     "wiredtiger-osx",
@@ -80,6 +81,7 @@ def check_configure(text):
         return True
 
 def check_strict(text):
+    regex = re.compile('CC=".*clang')
     # Skip those tests which set explicit warnings
     if "$warnings" in text:
         return True
@@ -88,6 +90,8 @@ def check_strict(text):
     if "CC=\"clang" in text:
         return True
     if "enable-strict" in text:
+        return True
+    if re.match(regex, text):
         return True
     return False
 
