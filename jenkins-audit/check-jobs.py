@@ -81,7 +81,7 @@ def check_configure(text):
         return True
 
 def check_strict(text):
-    regex = re.compile('CC=".*clang')
+    regex = re.compile(r"CC=\".*clang")
     # Skip those tests which set explicit warnings
     if "$warnings" in text:
         return True
@@ -91,7 +91,7 @@ def check_strict(text):
         return True
     if "enable-strict" in text:
         return True
-    if re.match(regex, text):
+    if re.search(regex, text) != None:
         return True
     return False
 
