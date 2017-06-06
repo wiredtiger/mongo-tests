@@ -172,7 +172,7 @@ def load_from_config(filename):
             if arr[0] == "oplog":
                 oplog = int(arr[1])
 
-def gather_avg(colls):
+def gather_avg(colls, threads):
     data = csv.reader(open(output_csv, 'r'), delimiter=",")
     latency = {}
     ops = {}
