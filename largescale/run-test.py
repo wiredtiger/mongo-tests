@@ -207,7 +207,7 @@ while (go):
     populate_collections(client, collections)
     # Grab the recent latiencies and opctrs, as the populate can skew them
     get_last_ops(client)
-    launch_poc_driver(collections)
+    launch_poc_driver(collections, threads)
     start_interval = time.time()
     interval_rutime = 0
     avg_latencies = []
