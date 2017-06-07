@@ -10,7 +10,6 @@ import csv
 from threading import Thread
 from pymongo import MongoClient
 from bson.binary import Binary
-from loremipsum import get_sentences
 import data
 
 # Test Plan
