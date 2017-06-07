@@ -16,6 +16,7 @@ email_check_skip = [
     "wiredtiger-syscall-linux",
     "wiredtiger-fault-inject",
     "mongodb-massive-scale",
+    "mongodb-massive-scale-group-collections",
 ]
 
 match_jobs = [
