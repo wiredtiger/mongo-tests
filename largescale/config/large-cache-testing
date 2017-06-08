@@ -1,0 +1,5 @@
+runtime=3600
+throughput=10000
+thread=64
+collections=100
+cache_size_gb=100
