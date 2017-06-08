@@ -39,6 +39,7 @@ collections_contents = {}
 output_csv = "../results/out.csv"
 oplog = 0
 batch_size = 1
+fail_factor = 1.2
 
 output_filename = "results.csv"
 last_ops = {"insert": 0, "update": 0, "delete": 0, "query":0, "writes":0, "write_latency":0}
@@ -135,7 +136,7 @@ def launch_poc_driver(run_collections, run_threads):
     java_proc = subprocess.Popen(command, shell=True, stdout=FNULL)
 
 def load_from_config(filename):
-    global insert_rate, update_rate, query_rate, num_collections, runtime, num_threads, gross_throughput, oplog, cache_size_gb
+    global insert_rate, update_rate, query_rate, num_collections, runtime, num_threads, gross_throughput, oplog, cache_size_gb, cache_size
     with open(filename, "r") as f:
         for line in f:
             arr = line.split('=')
@@ -157,20 +158,47 @@ def load_from_config(filename):
                 oplog = int(arr[1])
             if arr[0] == "cache_size_gb":
                 cache_size_gb = int(arr[1])
+                cache_size = int(cache_size_gb * 1024 * 1024 * 1024 * factor)
 
-def gather_avg(colls):
+def mean(arr): 
+    return (sum(arr) / float(len(arr)))
+
+
+def pass_fail_check():
+    fail = False
     data = csv.reader(open(output_csv, 'r'), delimiter=",")
-    latency = {}
-    ops = {}
+    populated = False
+    w_latency = []
+    w_throughput = []
+    r_latency = []
+    r_throughput = []
     for row in data:
-        if row[0] != "system_clock":
-            coll_count = int(row[2])
-            if coll_count not in latency:
-                latency[coll_count] = 0
-                ops[coll_count] = 0
-            latency[coll_count] += (int(row[6]))
-            ops[coll_count] += int(row[10])
-    return (float(latency[colls])/ops[colls], ops[colls]/((runtime/10)-1))
+        if row[0] == "system_clock":
+            continue
+        w_tput = int(row[6]) / float(row[10])
+        r_tput = int(row[9]) / float(row[7])
+        if populated:
+            if int(row[6]) > mean(w_latency) * fail_factor: 
+                print("Mean write latency of " + str(mean(w_latency)) + " deviated from with latency of " + row[6])
+                fail = True
+
+            if int(row[9]) > mean(r_latency) * fail_factor:
+                print("Mean read latency of " + str(mean(r_latency)) + " deviated from with latency of " + row[9])
+                fail = True
+
+            if w_tput * fail_factor < mean(w_throughput):
+                print("Mean write throughput of " + str(mean(w_throughput)) + " deviated from with throughput of " + str(w_tput))
+                fail = True
+
+            if r_tput * fail_factor < mean(r_throughput):
+                print("Mean read throughput of " + str(mean(r_throughput)) + " deviated from with throughput of " + str(r_tput))
+                fail = True
+
+        w_latency.append(int(row[6]))
+        w_throughput.append(w_tput)
+        r_latency.append(int(row[9]))
+        r_throughput.append(int(r_tput))
+    return fail
 
 # Main
 if len(sys.argv) > 1:
@@ -190,7 +218,7 @@ while (interval_runtime < runtime):
     now = time.time()
     interval_runtime = now - start
     time.sleep(10)
-res = gather_avg(num_collections, num_threads)
-avg_response_time = res[0]
-avg_throughput = res[1]
-print("Run completed avg latency with " + str(num_collections) + " collections is " + str(avg_response_time) + "ms/op and throughput of " + str(avg_throughput) + "ops/sec")
+if pass_fail_check():
+    exit(1)
+else:
+    exit(0)
