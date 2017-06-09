@@ -9,6 +9,7 @@ import datetime
 import csv
 from pymongo import MongoClient
 from bson.binary import Binary
+from loremipsum import get_sentences
 
 # Steering
 insert_rate = 0
