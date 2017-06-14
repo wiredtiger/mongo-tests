@@ -199,10 +199,10 @@ def pass_fail_check():
         r_latency.append(int(row[9]))
         r_throughput.append(int(r_tput))
 
-    print "Mean read throughput " + str(mean(r_throughput))
-    print "Mean write throughput " + str(mean(w_throughput))
-    print "Mean read latency " + str(mean(r_latency))
-    print "Mean write latency " + str(mean(w_latency))
+    print "Avg read throughput " + str(mean(r_throughput))
+    print "Avg write throughput " + str(mean(w_throughput))
+    print "Avg read latency " + str(mean(r_latency))
+    print "Avg write latency " + str(mean(w_latency))
 
     return fail
 
