@@ -198,6 +198,12 @@ def pass_fail_check():
         w_throughput.append(w_tput)
         r_latency.append(int(row[9]))
         r_throughput.append(int(r_tput))
+
+    print "Mean read throughput " + str(mean(r_throughput))
+    print "Mean write throughput " + str(mean(w_throughput))
+    print "Mean read latency " + str(mean(r_latency))
+    print "Mean write latency " + str(mean(w_latency))
+
     return fail
 
 # Main
@@ -219,6 +225,6 @@ while (interval_runtime < runtime):
     interval_runtime = now - start
     time.sleep(10)
 if pass_fail_check():
-    exit(1)
+    exit(123)
 else:
     exit(0)
