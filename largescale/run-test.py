@@ -236,4 +236,11 @@ while (go):
 
 # Close the results file 
 fhandle.close()
-exit(passed)
+
+# We don't return an error on failure, we print this message. This result message should be reviewed by the caller and acted on appropriately
+# This is currently done so Jenkins can mark builds without group-collections as unstable, rather than outright failing them
+if passed:
+    print "Test Passed"
+else:
+    print "Test Failed"
+
