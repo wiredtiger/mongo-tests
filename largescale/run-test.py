@@ -197,7 +197,7 @@ fhandle.write("time,relative_time,inserts,collections,num_writes,write_latency,a
 start=time.time()
 go=True
 fail_run=False
-passed=1
+passed=False
 collections=collection_ramp_size
 threads=thread_ramp_size
 
@@ -225,7 +225,7 @@ while (go):
     # Work out if we should finish here.
     if (time.time() - start) > total_runtime or (collections >= num_collections and threads >= num_threads):
         go=False
-        passed=0
+        passed=True
     if avg_response_time > fail_at_ms or avg_throughput < gross_throughput * fail_at_throughput_factor:
         if fail_run == False:
             fail_run=True
