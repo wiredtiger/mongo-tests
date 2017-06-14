@@ -15,9 +15,9 @@ strcit_skips = [
 email_check_skip = [
     "wiredtiger-syscall-linux",
     "wiredtiger-fault-inject",
-    "mongodb-massive-scale",
-    "mongodb-massive-scale-group-collections",
-    "mongodb-massive-scale-large-cache",
+    "mongodb-100gb-cache",
+    "mongodb-million-collections",
+    "mongodb-million-collections-group-cols",
 ]
 
 match_jobs = [
