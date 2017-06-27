@@ -1,5 +1,7 @@
-runtime=3600
+runtime=7200
 throughput=10000
 thread=64
 collections=100
-cache_size_gb=100
+cache_size_gb=75
+oplog=1
+
