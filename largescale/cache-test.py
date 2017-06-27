@@ -111,7 +111,7 @@ def populate_collections(client, collections):
 
 def setup_mongodb(config):
     if oplog != 0:
-        client.admin.command("replSetInitiate")
+        client.admin.command({"replSetInitiate":{ "_id": "test", "version": 1, "members": [ { "_id": 0, "host" : "127.0.0.1:27017" } ]}})
         time.sleep(10)
 
 
