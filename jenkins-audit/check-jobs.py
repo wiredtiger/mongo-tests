@@ -6,7 +6,7 @@ import re
 import requests
 import json
 
-strcit_skips = [
+strict_skips = [
     "wiredtiger-osx",
     "wiredtiger-compat-r1",
     "wiredtiger-compat-r2",
@@ -24,8 +24,7 @@ email_check_skip = [
 ]
 
 match_jobs = [
-    ["wiredtiger-test-format-stress-sanitizer", None],
-    ["wiredtiger-test-format-stress-sanitizer-old-branches", None]
+    ["wiredtiger-test-format-stress-sanitizer", None]
 ]
 
 clean_skips = [
@@ -175,7 +174,7 @@ def check_builds(root, job):
     if not found_compile:
         return True
 
-    if job in strcit_skips:
+    if job in strict_skips:
         return True
     
     return found_strict
