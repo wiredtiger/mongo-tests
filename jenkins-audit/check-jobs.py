@@ -11,6 +11,7 @@ strict_skips = [
     "wiredtiger-compat-r1",
     "wiredtiger-compat-r2",
     "wiredtiger-compat-develop",
+    "wiredtiger-compatibility",
     "wiredtiger-test-mongodb-3.0",
     "wiredtiger-test-mongodb-3.2"
 ]
