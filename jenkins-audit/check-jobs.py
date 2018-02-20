@@ -33,6 +33,7 @@ clean_skips = [
     "jenkins-audit",
     "wiredtiger-perf-long-jobs",
     "wiredtiger-perf",
+    "mongodb-perf-ycsb-compare-releases",
 ]
 
 match_jobs_set = False
