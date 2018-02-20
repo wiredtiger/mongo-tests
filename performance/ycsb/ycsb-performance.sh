@@ -98,8 +98,9 @@ function run_ycsb
 
 function save_diagdata
 {
-	echo "Saving diagnostic.data to $OUTPUT_DIR/$1.diagdata"
-	cp -rp $DATA_DIR/diagnostic.data  $OUTPUT_DIR/diatnostic.data/$1
+	echo "Saving diagnostic.data to $OUTPUT_DIR/diagnostic.data/$1"
+	mkdir -p $OUTPUT_DIR/diagnostic.data
+	cp -rp $DATA_DIR/diagnostic.data  $OUTPUT_DIR/diagnostic.data/$1
 }
 
 if [ ! -d $LOG_DIR ]; then
