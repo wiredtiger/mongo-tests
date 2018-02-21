@@ -230,7 +230,7 @@ for job in os.listdir(job_dir):
     if not check_email_plots(root, job):
         print("Error; Email of plots in job %s doesn't have the correct URL" % job)
     if job not in archive_stats_skips:
-        check_archiving_perf_jobs(root, job):
+        check_archiving_perf_jobs(root, job)
 
 # We should have at max 1 branch, the current head of mongodb, which is tested by develop
 if len(github_branches) > 1:
