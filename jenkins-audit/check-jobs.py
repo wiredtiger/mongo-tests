@@ -56,12 +56,11 @@ def check_recips (description, recips):
     # There is a magic description string to flag tests being written which
     # should email their creator, rather than everyone.
     dev_test_string = 'This test is under active development.'
-    if dev_test_string in description.text:
+    if dev_test_string in str(description.text):
         should_email_testing = False
     email = recips.text
-    if email != 'testing@wiredtiger.com' and email != '${ghprbActualCommitAuthorEmail}, testing@wiredtiger.com':
-        does_email_testing = False
-    else:
+    does_email_testing = False
+    if re.search('testing@wiredtiger.com', email):
         does_email_testing = True
 
     if should_email_testing and not does_email_testing:
@@ -70,7 +69,7 @@ def check_recips (description, recips):
         return True
     elif not should_email_testing and does_email_testing:
         print("Error: Job %s shouldn't email testing@wiredtiger.com." % (job))
-        print("\t If the test is fully working remove: \"%s\" from the job description" % (dev_test_string))
+        print("\t If the test is fully working, remove: \"%s\" from the job description" % (dev_test_string))
         return True
     return False
 
