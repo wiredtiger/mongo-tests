@@ -1,6 +1,7 @@
 #! /usr/bin/python
 
 import xml.etree.ElementTree as etree
+import argparse
 import os
 import re
 import requests
@@ -44,20 +45,39 @@ match_jobs_set = False
 
 github_branches = []
 
-job_dir = "/home/jenkins/jenkins/jobs/"
-def check_recips (recips):
+def check_recips (description, recips):
+    # Jobs should always email someone.
     if recips == None:
         print("Error, job %s has no recipients set" % job)
         return True
+
+    # Most test should email testing@ on failure
+    should_email_testing = True
+    # There is a magic description string to flag tests being written which
+    # should email their creator, rather than everyone.
+    dev_test_string = 'This test is under active development.'
+    if dev_test_string in str(description.text):
+        should_email_testing = False
     email = recips.text
-    if email != 'testing@wiredtiger.com' and email != '${ghprbActualCommitAuthorEmail}, testing@wiredtiger.com':
-        print("Error, job %s not got testing as the email address, it has %s" % (job, email))
+    does_email_testing = False
+    if re.search('testing@wiredtiger.com', email):
+        does_email_testing = True
+
+    if should_email_testing and not does_email_testing:
+        print("Error: Job %s should email testing@wiredtiger.com, but instead emails %s" % (job, email))
+        print("\t If the test is being worked on add: \"%s\" to the job description" % (dev_test_string))
         return True
+    elif not should_email_testing and does_email_testing:
+        print("Error: Job %s shouldn't email testing@wiredtiger.com." % (job))
+        print("\t If the test is fully working, remove: \"%s\" from the job description" % (dev_test_string))
+        return True
+    return False
 
 def check_mail (root):
     # Skip the top multijob processes, they dont send emails
     if root.tag == 'com.tikal.jenkins.plugins.multijob.MultiJobProject':
         return True
+    description = root.find('./description')
     mailer = root.find('./publishers/hudson.tasks.Mailer')
     recips = None
     if mailer == None:
@@ -68,7 +88,7 @@ def check_mail (root):
         recips = mailer.find("recipientList")
     else:
         recips = mailer.find("recipients")
-    if check_recips(recips):
+    if check_recips(description, recips):
         return True
 
 def check_email_plots(root, job):
@@ -211,10 +231,16 @@ def setup_mongodb_branches():
                 m = re.search('(\d\.\d)', i["name"])
                 github_branches.append(m.groups(0)[0])
 
-# Main
+# Main - setup for local testing if requested
+parser = argparse.ArgumentParser()
+parser.add_argument('--job_dir', nargs='?', help='Jenkins configuration jobs directory', default='/home/jenkins/jenkins/jobs')
+args = parser.parse_args()
+job_dir = args.job_dir
+
+
 setup_mongodb_branches()
 for job in os.listdir(job_dir):
-    config_file = job_dir + job + "/config.xml"
+    config_file = job_dir + "/" + job + "/config.xml"
     if not os.path.exists(config_file):
         print("Old Job found - %s" % job)
         continue
