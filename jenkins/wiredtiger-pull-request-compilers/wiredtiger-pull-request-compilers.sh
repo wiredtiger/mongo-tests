@@ -30,11 +30,14 @@ make clean > /dev/null
 make > /dev/null
 make clean > /dev/null
 
-../configure CC=/usr/local/gcc81/bin/gcc \
-    --enable-diagnostic --enable-strict \
-    --enable-lz4 --enable-snappy --enable-zlib --enable-zstd > /dev/null
-make > /dev/null
-make clean > /dev/null
+# Start testing GCC8 from mongodb-3.6 up
+if [ "$ghprbTargetBranch" != "mongodb-3.4" && "$ghprbTargetBranch" != "mongodb-3.2" ]; then
+    ../configure CC=/usr/local/gcc81/bin/gcc \
+        --enable-diagnostic --enable-strict \
+        --enable-lz4 --enable-snappy --enable-zlib --enable-zstd > /dev/null
+    make > /dev/null
+    make clean > /dev/null
+fi
 
 # default clang on the test machines is 3.4
 ../configure CC=/usr/bin/clang \
