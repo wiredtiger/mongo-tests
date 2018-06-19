@@ -41,7 +41,7 @@ archive_stats_skips = [
     "mongodb-perf-ycsb-compare-releases",
 ]
 
-mongodb-branch-skips = [
+mongodb_branch_skips = [
     "3.0",
 ]
 
@@ -233,7 +233,7 @@ def setup_mongodb_branches():
         for i in repoItem:
             if "mongodb-" in i["name"]:
                 m = re.search('(\d\.\d)', i["name"])
-                if m.groups(0)[0] not in mongodb-branch-skips:
+                if m.groups(0)[0] not in mongodb_branch_skips:
                     github_branches.append(m.groups(0)[0])
 
 # Main - setup for local testing if requested
