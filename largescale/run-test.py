@@ -226,6 +226,7 @@ while (go):
     if (time.time() - start) > total_runtime or (collections >= num_collections and threads >= num_threads):
         go=False
         passed=True
+        print("total run time: %s, collections: %s, threads: %s" % ((time.time() - start), collections, threads))
     if avg_response_time > fail_at_ms or avg_throughput < gross_throughput * fail_at_throughput_factor:
         if fail_run == False:
             fail_run=True
