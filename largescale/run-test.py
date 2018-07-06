@@ -223,10 +223,11 @@ while (go):
     avg_throughput = res[1]
     print("Run completed avg latency with " + str(collections) + " collections is " + str(avg_response_time) + "ms/op and throughput of " + str(avg_throughput) + "ops/sec")
     # Work out if we should finish here.
+    print("total run time: %s, total_runtime: %s \ncollections: %s, num_collections: %s \nthreads: %s, num_threads: %s" %  
+          ((time.time() - start), total_runtime, collections, num_collections, threads, num_threads))
     if (time.time() - start) > total_runtime or (collections >= num_collections and threads >= num_threads):
         go=False
         passed=True
-        print("total run time: %s, collections: %s, threads: %s" % ((time.time() - start), collections, threads))
     if avg_response_time > fail_at_ms or avg_throughput < gross_throughput * fail_at_throughput_factor:
         if fail_run == False:
             fail_run=True
