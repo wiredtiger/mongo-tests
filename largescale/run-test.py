@@ -99,7 +99,7 @@ def populate_collections(client, collections):
                     "bin" : Binary("0") })
 
             bulk.execute()
-           # print("populated " + dbname + "." + ns + " with " + str(docs_per) + " documents")
+            print("populated " + dbname + "." + ns + " with " + str(docs_per) + " documents")
                 
     # FsyncLock here
     client.admin.command("fsync", lock=False)
@@ -182,8 +182,8 @@ def gather_avg(colls, threads):
                 ops[coll_count] = 0
             latency[coll_count] += (int(row[6]))
             ops[coll_count] += int(row[10])
-    #print("Gross latency is " + str(latency[colls]) + ". Gross ops is " + str(ops[colls]))
-    #print("Avg latency per op " + str(float(latency[colls])/ops[colls]))
+    print("Gross latency is " + str(latency[colls]) + ". Gross ops is " + str(ops[colls]))
+    print("Avg latency per op " + str(float(latency[colls])/ops[colls]))
     return (float(latency[colls])/ops[colls], ops[colls]/((ramp_interval/10)-1))
 
 # Main
@@ -225,10 +225,23 @@ while (go):
     # Work out if we should finish here.
     print("total run time: %s, total_runtime: %s \ncollections: %s, num_collections: %s \nthreads: %s, num_threads: %s" %  
           ((time.time() - start), total_runtime, collections, num_collections, threads, num_threads))
-    if (time.time() - start) > total_runtime or (collections >= num_collections and threads >= num_threads):
+    if (time.time() - start) > total_runtime:
+        print("This run duration is over %s" % total_runtime) 
         go=False
         passed=True
-    if avg_response_time > fail_at_ms or avg_throughput < gross_throughput * fail_at_throughput_factor:
+    elif (collections >= num_collections and threads >= num_threads):
+        print("This run num of collections is %s (over %s) and num of threads is %s (over %s)" % 
+              (collections, num_collections, threads, num_threads))
+        go=False
+        passed=True
+    if avg_response_time > fail_at_ms:
+        print("Average response time is over %s" % fail_at_ms)
+        if fail_run == False:
+            fail_run=True
+        else:
+            go=False
+    elif avg_throughput < gross_throughput * fail_at_throughput_factor:
+        print("Average throughput is less than %s" % gross_throughput * fail_at_throughput_factor) 
         if fail_run == False:
             fail_run=True
         else:
