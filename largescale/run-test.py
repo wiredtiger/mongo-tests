@@ -32,7 +32,7 @@ batch_size = 1
 oplog = 0
 thread_ramp_size = 64
 thread_ramp_rate = 1
-
+targeted_throughput = float(gross_throughput) * fail_at_throughput_factor
 
 runtime = 0
 output_filename = "results.csv"
@@ -222,30 +222,35 @@ while (go):
     avg_response_time = res[0]
     avg_throughput = res[1]
     print("Run completed avg latency with " + str(collections) + " collections is " + str(avg_response_time) + "ms/op and throughput of " + str(avg_throughput) + "ops/sec")
+
     # Work out if we should finish here.
     print("total run time: %s, total_runtime: %s \ncollections: %s, num_collections: %s \nthreads: %s, num_threads: %s" %  
           ((time.time() - start), total_runtime, collections, num_collections, threads, num_threads))
+
+    # Passed run cases
     if (time.time() - start) > total_runtime:
-        print("This run duration is over %s" % total_runtime) 
+        print("We have run over configured total_runtime duration %s - test passed!" % total_runtime) 
         go=False
         passed=True
     elif (collections >= num_collections and threads >= num_threads):
-        print("This run num of collections is %s (over %s) and num of threads is %s (over %s)" % 
-              (collections, num_collections, threads, num_threads))
+        print("We have run over configured num_collections %s - test passed!" % num_collections)
         go=False
         passed=True
+
+    # Failed run cases
     if avg_response_time > fail_at_ms:
-        print("Average response time is over %s" % fail_at_ms)
+        print("Average response time is over %s - test failed!" % fail_at_ms)
         if fail_run == False:
             fail_run=True
         else:
             go=False
-    elif avg_throughput < gross_throughput * fail_at_throughput_factor:
-        print("Average throughput is less than %s" % gross_throughput * fail_at_throughput_factor) 
+    elif avg_throughput < targeted_throughput:
+        print("Average throughput is less than %s - test failed" % targeted_throughput) 
         if fail_run == False:
             fail_run=True
         else:
             go=False
+
     collections = int(collections * collection_ramp_rate)
     threads = int(threads * thread_ramp_rate)
 
