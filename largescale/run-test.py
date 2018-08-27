@@ -126,7 +126,7 @@ def launch_poc_driver(run_collections, run_threads):
                " -o " + str(output_csv) +
                " -t " + str(run_threads) +
                " -b " + str(batch_size))
-    print("Command for the run: %s" % command)
+    print("\nCommand for the run:\n  %s" % command)
     sys.stdout.flush()
     java_proc = subprocess.Popen(command, shell=True, stdout=FNULL)
 
@@ -182,8 +182,8 @@ def gather_avg(colls, threads):
                 ops[coll_count] = 0
             latency[coll_count] += (int(row[6]))
             ops[coll_count] += int(row[10])
-    print("Gross latency is " + str(latency[colls]) + ". Gross ops is " + str(ops[colls]))
-    print("Avg latency per op " + str(float(latency[colls])/ops[colls]))
+    #print("Gross latency is " + str(latency[colls]) + ". Gross ops is " + str(ops[colls]))
+    #print("Avg latency per op " + str(float(latency[colls])/ops[colls]))
     return (float(latency[colls])/ops[colls], ops[colls]/((ramp_interval/10)-1))
 
 # Main
@@ -223,11 +223,11 @@ while (go):
     avg_throughput = res[1]
 
     # Dump statistics after each run
-    print("Run completed with statistics below:\n")
-    print("  - avg response time: %s (ms/op), avg throughput: %s (ops/sec) \n" % (avg_response_time, avg_throughput)) 
-    print("  - total run time: %s, configured total_runtime: %s \n" % ((time.time() - start), total_runtime))
-    print("  - num of collections: %s, configured num_collections: %s \n" % (collections, num_collections))
-    print("  - threads: %s, configured num_threads: %s \n" % (threads, num_threads))
+    print("The run completed with statistics below:\n")
+    print("  - avg response time (latency): %s (ms/op), avg throughput: %s (ops/sec)" % (avg_response_time, avg_throughput)) 
+    print("  - total run time: %s, configured total_runtime: %s" % ((time.time() - start), total_runtime))
+    print("  - num of collections: %s, configured num_collections: %s" % (collections, num_collections))
+    print("  - threads: %s, configured num_threads: %s" % (threads, num_threads))
 
     # Passed run cases
     if (time.time() - start) > total_runtime:
@@ -241,7 +241,7 @@ while (go):
 
     # Failed run cases
     if avg_response_time > fail_at_ms:
-        print("Average response time is over %s - test failed!" % fail_at_ms)
+        print("Average response time is over %s ms/op - test failed!" % fail_at_ms)
         if fail_run == False:
             fail_run=True
             # Give it another run if fails the 1st time
