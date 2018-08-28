@@ -32,7 +32,7 @@ batch_size = 1
 oplog = 0
 thread_ramp_size = 64
 thread_ramp_rate = 1
-
+targeted_throughput = float(gross_throughput) * fail_at_throughput_factor
 
 runtime = 0
 output_filename = "results.csv"
@@ -99,7 +99,7 @@ def populate_collections(client, collections):
                     "bin" : Binary("0") })
 
             bulk.execute()
-           # print("populated " + dbname + "." + ns + " with " + str(docs_per) + " documents")
+            #print("populated " + dbname + "." + ns + " with " + str(docs_per) + " documents")
                 
     # FsyncLock here
     client.admin.command("fsync", lock=False)
@@ -126,7 +126,7 @@ def launch_poc_driver(run_collections, run_threads):
                " -o " + str(output_csv) +
                " -t " + str(run_threads) +
                " -b " + str(batch_size))
-    print(command)
+    print("\nCommand for the run:\n  %s" % command)
     sys.stdout.flush()
     java_proc = subprocess.Popen(command, shell=True, stdout=FNULL)
 
@@ -221,16 +221,42 @@ while (go):
     res = gather_avg(collections, threads)
     avg_response_time = res[0]
     avg_throughput = res[1]
-    print("Run completed avg latency with " + str(collections) + " collections is " + str(avg_response_time) + "ms/op and throughput of " + str(avg_throughput) + "ops/sec")
-    # Work out if we should finish here.
-    if (time.time() - start) > total_runtime or (collections >= num_collections and threads >= num_threads):
+
+    # Dump statistics after each run
+    print("\nThe run completed with statistics below:")
+    print("  - avg response time (latency): %s (ms/op), avg throughput: %s (ops/sec)" % (avg_response_time, avg_throughput)) 
+    print("  - total run time: %s, configured total_runtime: %s" % ((time.time() - start), total_runtime))
+    print("  - num of collections: %s, configured num_collections: %s" % (collections, num_collections))
+    print("  - threads: %s, configured num_threads: %s" % (threads, num_threads))
+
+    # Passed run cases
+    if (time.time() - start) > total_runtime:
+        print("We have run over configured total_runtime duration %s - test passed!" % total_runtime) 
         go=False
         passed=True
-    if avg_response_time > fail_at_ms or avg_throughput < gross_throughput * fail_at_throughput_factor:
+    elif (collections >= num_collections and threads >= num_threads):
+        print("We have run over configured num_collections %s - test passed!" % num_collections)
+        go=False
+        passed=True
+
+    # Failed run cases
+    if avg_response_time > fail_at_ms:
+        print("Average response time is over %s ms/op - test failed!" % fail_at_ms)
         if fail_run == False:
             fail_run=True
+            # Give it another run if fails the 1st time
         else:
+            # If reaching here it means failing the 2nd run, no need to continue
             go=False
+    elif avg_throughput < targeted_throughput:
+        print("Average throughput is less than %s - test failed!" % targeted_throughput) 
+        if fail_run == False:
+            fail_run=True
+            # Give it another run if fails the 1st time
+        else:
+            # If reaching here it means failing the 2nd run, no need to continue
+            go=False
+
     collections = int(collections * collection_ramp_rate)
     threads = int(threads * thread_ramp_rate)
 
