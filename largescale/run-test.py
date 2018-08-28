@@ -223,7 +223,7 @@ while (go):
     avg_throughput = res[1]
 
     # Dump statistics after each run
-    print("The run completed with statistics below:\n")
+    print("\nThe run completed with statistics below:")
     print("  - avg response time (latency): %s (ms/op), avg throughput: %s (ops/sec)" % (avg_response_time, avg_throughput)) 
     print("  - total run time: %s, configured total_runtime: %s" % ((time.time() - start), total_runtime))
     print("  - num of collections: %s, configured num_collections: %s" % (collections, num_collections))
