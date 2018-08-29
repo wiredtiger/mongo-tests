@@ -67,6 +67,7 @@ def random_string(length):
 
 
 def populate_collections(client, collections):
+    print("Start populating documents into collections ...")
     docs_per = working_set_docs / collections
     for x in range(collections):
         if x not in collections_contents:
@@ -100,6 +101,7 @@ def populate_collections(client, collections):
 
             bulk.execute()
             #print("populated " + dbname + "." + ns + " with " + str(docs_per) + " documents")
+    print("Finish populating %s documents into each of the %s collections" % (docs_per, collections))
                 
     # FsyncLock here
     client.admin.command("fsync", lock=False)
