@@ -6,7 +6,6 @@
 set -eux
 
 MONGO_REPO="https://github.com/mongodb/mongo"
-WT_REPO="https://github.com/wiredtiger/wiredtiger"
 MONGO_TESTS_REPO="https://github.com/wiredtiger/mongo-tests"
 POCDRIVER_REPO="https://github.com/wiredtiger/POCDriver"
 POCDRIVER_BRANCH="mongodb-million-collections"
@@ -24,16 +23,14 @@ function prepare_test_env() {
 
 	# Clone other repos inside the test directory
 	cd ${TEST_DIR}
-	for repo in ${WT_REPO} ${MONGO_TESTS_REPO} 
-	do
-		git clone $repo || exit $?
-	done
+	git clone ${MONGO_TESTS_REPO} || exit $?
 	git clone -b ${POCDRIVER_BRANCH} ${POCDRIVER_REPO} || exit $?
 
 	# Setup directory to record test output
 	if [ -d "results" ]; then
 		rm -rf results
 	fi
+	mkdir results
 }
 
 function merge_wiredtiger_develop() { 
@@ -80,7 +77,6 @@ function start_mongod(){
 
 function start_million_collection_test() {
 	cd mongo-tests
-	mkdir results
 	python largescale/run-test.py largescale/config/million-collection-testing | tee ../results/results.txt
 	exit ${PIPESTATUS[0]}
 }
