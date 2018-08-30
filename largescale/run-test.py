@@ -67,7 +67,7 @@ def random_string(length):
 
 
 def populate_collections(client, collections):
-    print("Start populating documents into collections ...")
+    print("\nStart populating documents into collections ...")
     docs_per = working_set_docs / collections
     for x in range(collections):
         if x not in collections_contents:
@@ -101,7 +101,7 @@ def populate_collections(client, collections):
 
             bulk.execute()
             #print("populated " + dbname + "." + ns + " with " + str(docs_per) + " documents")
-    print("Finish populating %s documents into each of the %s collections" % (docs_per, collections))
+    print("\nFinish populating %s documents into each of the %s collections" % (docs_per, collections))
                 
     # FsyncLock here
     client.admin.command("fsync", lock=False)
@@ -204,6 +204,7 @@ collections=collection_ramp_size
 threads=thread_ramp_size
 
 while (go):
+    print("======\nStarting a new run")
     populate_collections(client, collections)
     # Grab the recent latiencies and opctrs, as the populate can skew them
     get_last_ops(client)
