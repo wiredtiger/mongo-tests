@@ -25,6 +25,8 @@ function prepare_test_env() {
 	cd ${TEST_DIR}
 	git clone ${MONGO_TESTS_REPO} || exit $?
 	git clone -b ${POCDRIVER_BRANCH} ${POCDRIVER_REPO} || exit $?
+	# Build from the POCDriver repo
+	( cd POCDriver && mvn clean package )
 
 	# Setup directory to record test output
 	if [ -d "results" ]; then
