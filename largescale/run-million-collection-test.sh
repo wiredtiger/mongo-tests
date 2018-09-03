@@ -54,12 +54,7 @@ function merge_wiredtiger_develop() {
 	)
 }
 
-function build_mongo() { 
-	# Modify the build scripts
-	sed -i.bak 's/ggdb/gdwarf-2/' ./SConstruct
-	sed -i 's/stdint\.h>/stdint.h>\n        #include <stdbool.h>/g' src/third_party/wiredtiger/SConscript
-
-	# build mongod
+function build_mongod() { 
 	python buildscripts/scons.py CC=/opt/mongodbtoolchain/v2/bin/gcc CXX=/opt/mongodbtoolchain/v2/bin/g++ ${PERF_MAKE_FLAGS} mongod || exit $?
 }
 
@@ -86,7 +81,7 @@ function start_million_collection_test() {
 function main() { 
 	prepare_test_env
 	merge_wiredtiger_develop
-	build_mongo
+	build_mongod
 	start_mongod
 	start_million_collection_test
 }
