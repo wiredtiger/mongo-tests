@@ -101,7 +101,7 @@ def populate_collections(client, collections):
 
             bulk.execute()
             #print("populated " + dbname + "." + ns + " with " + str(docs_per) + " documents")
-    print("\nFinish populating %s documents into each of the %s collections" % (docs_per, collections))
+    print("\nFinish populating %s documents into each of the collections" % docs_per)
                 
     # FsyncLock here
     client.admin.command("fsync", lock=False)
@@ -224,6 +224,7 @@ while (go):
     res = gather_avg(collections, threads)
     avg_response_time = res[0]
     avg_throughput = res[1]
+    print("Run completed avg latency with " + str(collections) + " collections is " + str(avg_response_time) + "ms/op and throughput of " + str(avg_throughput) + "ops/sec")
 
     # Dump statistics after each run
     print("\nThe run completed with statistics below:")
