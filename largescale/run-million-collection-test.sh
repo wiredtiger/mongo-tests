@@ -42,7 +42,7 @@ function prepare_test_env() {
 
 function merge_wiredtiger_develop() { 
 	(cd src/third_party
-	curl -OJL https://api.github.com/repos/wiredtiger/wiredtiger/tarball/develop
+	curl -OL https://api.github.com/repos/wiredtiger/wiredtiger/tarball/develop
 	tarball=$(echo wiredtiger-wiredtiger-*.tar.gz)
 	test -f "${tarball}"
 	mkdir -p wiredtiger
