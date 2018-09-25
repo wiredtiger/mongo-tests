@@ -23,10 +23,15 @@ function prepare_test_env() {
 
 	# Clone other repos inside the test directory
 	cd ${TEST_DIR}
-	git clone ${MONGO_TESTS_REPO} || exit $?
-	git clone -b ${POCDRIVER_BRANCH} ${POCDRIVER_REPO} || exit $?
+	git clone -b million-collect-test-evg ${MONGO_TESTS_REPO} || exit $?
+
+	# Copy POCDriver.jar over from mongo-tests local repo
+	mkdir -p POCDriver/bin
+	cp mongo-tests/largescale/POCDriver.jar POCDriver/bin/
+
+	#git clone -b ${POCDRIVER_BRANCH} ${POCDRIVER_REPO} || exit $?
 	# Build from the POCDriver repo
-	( cd POCDriver && mvn clean package )
+	#( cd POCDriver && mvn clean package )
 
 	# Setup directory to record test output
 	if [ -d "results" ]; then
