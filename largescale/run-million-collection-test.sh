@@ -3,7 +3,7 @@
 # A script to prepare test environment and execute million collections testing.
 # 
 
-set -eux
+set -ux
 
 MONGO_REPO="https://github.com/mongodb/mongo"
 MONGO_TESTS_REPO="https://github.com/wiredtiger/mongo-tests"
