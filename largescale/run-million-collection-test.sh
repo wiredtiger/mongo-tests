@@ -61,7 +61,8 @@ function merge_wiredtiger_develop() {
 
 function build_mongod() { 
 	sudo pip install -r buildscripts/requirements.txt
-	python buildscripts/scons.py CC=/opt/mongodbtoolchain/v2/bin/gcc CXX=/opt/mongodbtoolchain/v2/bin/g++ ${PERF_MAKE_FLAGS} mongod || exit $?
+	PYTHON="/opt/mongodbtoolchain/v2/bin/python"
+	${PYTHON} buildscripts/scons.py CC=/opt/mongodbtoolchain/v2/bin/gcc CXX=/opt/mongodbtoolchain/v2/bin/g++ ${PERF_MAKE_FLAGS} mongod || exit $?
 }
 
 function start_mongod(){
