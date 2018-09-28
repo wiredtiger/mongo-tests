@@ -81,6 +81,7 @@ function start_mongod(){
 
 function start_million_collection_test() {
 	cd mongo-tests
+	sudo pip install loremipsum
 	python largescale/run-test.py largescale/config/million-collection-testing | tee ../results/results.txt
 	exit ${PIPESTATUS[0]}
 }
