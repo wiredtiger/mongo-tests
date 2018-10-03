@@ -7,7 +7,6 @@ set -ux
 
 MONGO_REPO="https://github.com/mongodb/mongo"
 MONGO_TESTS_REPO="https://github.com/wiredtiger/mongo-tests"
-POCDRIVER_REPO="https://github.com/wiredtiger/POCDriver"
 POCDRIVER_BRANCH="mongodb-million-collections"
 TEST_DIR="mongo-million-collection-test"
 PERF_MAKE_FLAGS="-j 20"
@@ -25,13 +24,8 @@ function prepare_test_env() {
 	cd ${TEST_DIR}
 	git clone -b million-collect-test-evg ${MONGO_TESTS_REPO} || exit $?
 
-	# Copy POCDriver.jar over from mongo-tests local repo
-	mkdir -p POCDriver/bin
-	cp mongo-tests/largescale/POCDriver.jar POCDriver/bin/
-
-	#git clone -b ${POCDRIVER_BRANCH} ${POCDRIVER_REPO} || exit $?
-	# Build from the POCDriver repo
-	#( cd POCDriver && mvn clean package )
+	# Copy POCDriver directory over from mongo-tests local repo
+	cp -r mongo-tests/largescale/POCDriver . 
 
 	# Setup directory to record test output
 	if [ -d "results" ]; then
