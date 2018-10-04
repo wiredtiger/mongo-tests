@@ -14,8 +14,13 @@ PERF_MAKE_FLAGS="-j 20"
 # Use mongodbtoolchain Python binary when possible
 if [ -f /opt/mongodbtoolchain/v2/bin/python ]; then 
 	PYTHON="/opt/mongodbtoolchain/v2/bin/python"
+	# Install required modules 
+	sudo /opt/mongodbtoolchain/v2/bin/pip install loremipsum
 else
 	PYTHON="python"
+	# Install required modules
+	sudo pip install -r buildscripts/requirements.txt
+	sudo pip install loremipsum
 fi
 
 function prepare_test_env() { 
@@ -61,7 +66,6 @@ function merge_wiredtiger_develop() {
 }
 
 function build_mongod() { 
-	sudo pip install -r buildscripts/requirements.txt
 	${PYTHON} buildscripts/scons.py CC=/opt/mongodbtoolchain/v2/bin/gcc CXX=/opt/mongodbtoolchain/v2/bin/g++ ${PERF_MAKE_FLAGS} mongod || exit $?
 }
 
@@ -80,9 +84,8 @@ function start_mongod(){
 }
 
 function start_million_collection_test() {
-	# Install required packages and modules
+	# Install required packages 
 	sudo yum install java-1.8.0 -y
-	sudo pip install loremipsum
 
 	cd mongo-tests
 	${PYTHON} largescale/run-test.py largescale/config/million-collection-testing | tee ../results/results.txt
