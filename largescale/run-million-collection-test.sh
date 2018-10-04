@@ -15,12 +15,12 @@ PERF_MAKE_FLAGS="-j 20"
 if [ -f /opt/mongodbtoolchain/v2/bin/python ]; then 
 	PYTHON="/opt/mongodbtoolchain/v2/bin/python"
 	# Install required modules 
-	sudo /opt/mongodbtoolchain/v2/bin/pip install loremipsum
+	/opt/mongodbtoolchain/v2/bin/python -m pip install loremipsum
 else
 	PYTHON="python"
 	# Install required modules
-	sudo pip install -r buildscripts/requirements.txt
-	sudo pip install loremipsum
+	python -m pip install -r buildscripts/requirements.txt
+	python -m pip install loremipsum
 fi
 
 function prepare_test_env() { 
