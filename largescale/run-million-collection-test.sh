@@ -11,6 +11,13 @@ POCDRIVER_BRANCH="mongodb-million-collections"
 TEST_DIR="mongo-million-collection-test"
 PERF_MAKE_FLAGS="-j 20"
 
+# Use mongodbtoolchain Python binary when possible
+if [ -f /opt/mongodbtoolchain/v2/bin/python ]; then 
+	PYTHON="/opt/mongodbtoolchain/v2/bin/python"
+else
+	PYTHON="python"
+fi
+
 function prepare_test_env() { 
 	# Backup the old test directory if found
 	if [ -d ${TEST_DIR} ]; then
@@ -55,7 +62,6 @@ function merge_wiredtiger_develop() {
 
 function build_mongod() { 
 	sudo pip install -r buildscripts/requirements.txt
-	PYTHON="/opt/mongodbtoolchain/v2/bin/python"
 	${PYTHON} buildscripts/scons.py CC=/opt/mongodbtoolchain/v2/bin/gcc CXX=/opt/mongodbtoolchain/v2/bin/g++ ${PERF_MAKE_FLAGS} mongod || exit $?
 }
 
@@ -79,7 +85,7 @@ function start_million_collection_test() {
 	sudo pip install loremipsum
 
 	cd mongo-tests
-	python largescale/run-test.py largescale/config/million-collection-testing | tee ../results/results.txt
+	${PYTHON} largescale/run-test.py largescale/config/million-collection-testing | tee ../results/results.txt
 	exit ${PIPESTATUS[0]}
 }
 
