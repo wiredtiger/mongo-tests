@@ -3,14 +3,25 @@
 # A script to prepare test environment and execute million collections testing.
 # 
 
-set -eux
+set -ux
 
 MONGO_REPO="https://github.com/mongodb/mongo"
 MONGO_TESTS_REPO="https://github.com/wiredtiger/mongo-tests"
-POCDRIVER_REPO="https://github.com/wiredtiger/POCDriver"
 POCDRIVER_BRANCH="mongodb-million-collections"
 TEST_DIR="mongo-million-collection-test"
 PERF_MAKE_FLAGS="-j 20"
+
+# Use mongodbtoolchain Python binary when possible
+if [ -f /opt/mongodbtoolchain/v2/bin/python ]; then 
+	PYTHON="/opt/mongodbtoolchain/v2/bin/python"
+	# Install required modules 
+	/opt/mongodbtoolchain/v2/bin/python -m pip install loremipsum
+else
+	PYTHON="python"
+	# Install required modules
+	python -m pip install -r buildscripts/requirements.txt
+	python -m pip install loremipsum
+fi
 
 function prepare_test_env() { 
 	# Backup the old test directory if found
@@ -23,10 +34,10 @@ function prepare_test_env() {
 
 	# Clone other repos inside the test directory
 	cd ${TEST_DIR}
-	git clone ${MONGO_TESTS_REPO} || exit $?
-	git clone -b ${POCDRIVER_BRANCH} ${POCDRIVER_REPO} || exit $?
-	# Build from the POCDriver repo
-	( cd POCDriver && mvn clean package )
+	git clone -b million-collect-test-evg ${MONGO_TESTS_REPO} || exit $?
+
+	# Copy POCDriver directory over from mongo-tests local repo
+	cp -r mongo-tests/largescale/POCDriver . 
 
 	# Setup directory to record test output
 	if [ -d "results" ]; then
@@ -37,7 +48,7 @@ function prepare_test_env() {
 
 function merge_wiredtiger_develop() { 
 	(cd src/third_party
-	curl -OJL https://api.github.com/repos/wiredtiger/wiredtiger/tarball/develop
+	curl -L https://api.github.com/repos/wiredtiger/wiredtiger/tarball/develop -o wiredtiger-wiredtiger-develop.tar.gz
 	tarball=$(echo wiredtiger-wiredtiger-*.tar.gz)
 	test -f "${tarball}"
 	mkdir -p wiredtiger
@@ -55,7 +66,7 @@ function merge_wiredtiger_develop() {
 }
 
 function build_mongod() { 
-	python buildscripts/scons.py CC=/opt/mongodbtoolchain/v2/bin/gcc CXX=/opt/mongodbtoolchain/v2/bin/g++ ${PERF_MAKE_FLAGS} mongod || exit $?
+	${PYTHON} buildscripts/scons.py CC=/opt/mongodbtoolchain/v2/bin/gcc CXX=/opt/mongodbtoolchain/v2/bin/g++ ${PERF_MAKE_FLAGS} mongod || exit $?
 }
 
 function start_mongod(){
@@ -73,8 +84,11 @@ function start_mongod(){
 }
 
 function start_million_collection_test() {
+	# Install required packages 
+	sudo yum install java-1.8.0 -y
+
 	cd mongo-tests
-	python largescale/run-test.py largescale/config/million-collection-testing | tee ../results/results.txt
+	${PYTHON} largescale/run-test.py largescale/config/million-collection-testing | tee ../results/results.txt
 	exit ${PIPESTATUS[0]}
 }
 
