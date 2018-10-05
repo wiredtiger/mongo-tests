@@ -34,7 +34,7 @@ function prepare_test_env() {
 
 	# Clone other repos inside the test directory
 	cd ${TEST_DIR}
-	git clone -b million-collect-test-evg ${MONGO_TESTS_REPO} || exit $?
+	git clone ${MONGO_TESTS_REPO} || exit $?
 
 	# Copy POCDriver directory over from mongo-tests local repo
 	cp -r mongo-tests/largescale/POCDriver . 
