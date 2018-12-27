@@ -166,7 +166,7 @@ verify_uri()
 }
 
 # Firstly, do some cleanup for the previous run
-git reset --hard && git clean -fdqx 
+git reset --hard && git clean -fdqx -e '*.tgz'
 
 # Build and test format, then set the archived wt binary for each release
 build_test_db "develop"
