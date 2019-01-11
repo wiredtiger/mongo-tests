@@ -66,7 +66,7 @@ function merge_wiredtiger_develop() {
 }
 
 function build_mongod() { 
-	${PYTHON} buildscripts/scons.py CC=/opt/mongodbtoolchain/v2/bin/gcc CXX=/opt/mongodbtoolchain/v2/bin/g++ ${PERF_MAKE_FLAGS} mongod || exit $?
+	${PYTHON} buildscripts/scons.py --variables-files=etc/scons/mongodbtoolchain_stable_gcc.vars ${PERF_MAKE_FLAGS} mongod || exit $?
 }
 
 function start_mongod(){
