@@ -87,7 +87,7 @@ function start_million_collection_test() {
 	sudo yum install java-1.8.0 -y
 
 	cd mongo-tests
-	${PYTHON} largescale/run-test.py largescale/config/million-collection-testing | tee ../results/results.txt
+	python largescale/run-test.py largescale/config/million-collection-testing | tee ../results/results.txt
 	exit ${PIPESTATUS[0]}
 }
 
