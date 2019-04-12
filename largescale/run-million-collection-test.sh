@@ -12,15 +12,15 @@ TEST_DIR="mongo-million-collection-test"
 PERF_MAKE_FLAGS="-j 20"
 
 # Use mongodbtoolchain Python binary when possible
-if [ -f /opt/mongodbtoolchain/v2/bin/python ]; then 
-	PYTHON="/opt/mongodbtoolchain/v2/bin/python"
+if [ -f /opt/mongodbtoolchain/v3/bin/python3 ]; then 
+	PYTHON="/opt/mongodbtoolchain/v3/bin/python3"
 	# Install required modules 
-	/opt/mongodbtoolchain/v2/bin/python -m pip install loremipsum
+	/opt/mongodbtoolchain/v3/bin/python3 -m pip install loremipsum
 else
-	PYTHON="python"
+	PYTHON="python3"
 	# Install required modules
-	python -m pip install -r buildscripts/requirements.txt
-	python -m pip install loremipsum
+	python3 -m pip install -r buildscripts/requirements.txt
+	python3 -m pip install loremipsum
 fi
 
 function prepare_test_env() { 
