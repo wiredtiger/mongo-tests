@@ -15,12 +15,12 @@ PERF_MAKE_FLAGS="-j 20"
 if [ -f /opt/mongodbtoolchain/v3/bin/python3 ]; then 
 	PYTHON="/opt/mongodbtoolchain/v3/bin/python3"
 	# Install required modules 
-	/opt/mongodbtoolchain/v3/bin/python3 -m pip install loremipsum
+	/opt/mongodbtoolchain/v3/bin/python3 -m pip install loremipsum psutil
 else
 	PYTHON="python3"
 	# Install required modules
 	python3 -m pip install -r buildscripts/requirements.txt
-	python3 -m pip install loremipsum
+	python3 -m pip install loremipsum psutil
 fi
 
 function prepare_test_env() { 
