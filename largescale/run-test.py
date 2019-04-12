@@ -268,8 +268,8 @@ while (go):
 fhandle.close()
 
 if not passed:
-    print "Test Failed"
+    print("Test Failed")
     exit(123)
 
-print "Test Passed"
+print("Test Passed")
 
