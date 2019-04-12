@@ -14,14 +14,13 @@ PERF_MAKE_FLAGS="-j 20"
 # Use mongodbtoolchain Python binary when possible
 if [ -f /opt/mongodbtoolchain/v3/bin/python3 ]; then 
 	PYTHON="/opt/mongodbtoolchain/v3/bin/python3"
-	# Install required modules 
-	/opt/mongodbtoolchain/v3/bin/python3 -m pip install loremipsum psutil pyyaml
 else
 	PYTHON="python3"
-	# Install required modules
-	python3 -m pip install -r buildscripts/requirements.txt
-	python3 -m pip install loremipsum psutil pyyaml
 fi
+
+# Install required modules
+${PYTHON} -m pip install -r buildscripts/requirements.txt
+${PYTHON} -m pip install loremipsum psutil pyyaml
 
 function prepare_test_env() { 
 	# Backup the old test directory if found
