@@ -18,10 +18,6 @@ else
 	PYTHON="python3"
 fi
 
-# Install required modules
-${PYTHON} -m pip install -r buildscripts/requirements.txt
-${PYTHON} -m pip install loremipsum psutil pyyaml
-
 function prepare_test_env() { 
 	# Backup the old test directory if found
 	if [ -d ${TEST_DIR} ]; then
@@ -34,6 +30,10 @@ function prepare_test_env() {
 	# Clone other repos inside the test directory
 	cd ${TEST_DIR}
 	git clone ${MONGO_TESTS_REPO} || exit $?
+
+	# Install required modules
+	${PYTHON} -m pip install -r buildscripts/requirements.txt
+	${PYTHON} -m pip install loremipsum psutil pyyaml
 
 	# Copy POCDriver directory over from mongo-tests local repo
 	cp -r mongo-tests/largescale/POCDriver . 
