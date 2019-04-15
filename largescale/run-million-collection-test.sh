@@ -33,7 +33,7 @@ function prepare_test_env() {
 
 	# Install required modules
 	${PYTHON} -m pip install -r buildscripts/requirements.txt
-	python -m pip install loremipsum
+	pip install loremipsum
 
 	# Copy POCDriver directory over from mongo-tests local repo
 	cp -r mongo-tests/largescale/POCDriver . 
