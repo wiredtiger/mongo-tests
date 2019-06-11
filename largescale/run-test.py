@@ -130,7 +130,7 @@ def launch_poc_driver(run_collections, run_threads):
                " -b " + str(batch_size))
     print("\nCommand for the run:\n  %s" % command)
     sys.stdout.flush()
-    java_proc = subprocess.Popen(command, shell=True, stdout=FNULL)
+    java_proc = subprocess.Popen(command, shell=True)
 
 def load_from_config(filename):
     global insert_rate, update_rate, query_rate, num_collections, total_runtime, time_to_ramp, ramp_interval, num_threads, gross_throughput, collection_ramp_size, working_set_docs, collection_ramp_rate, fail_at_ms, fail_at_throughput_factor, oplog, thread_ramp_rate, thread_ramp_size
