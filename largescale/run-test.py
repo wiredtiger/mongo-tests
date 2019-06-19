@@ -130,7 +130,7 @@ def launch_poc_driver(run_collections, run_threads):
                " -b " + str(batch_size))
     print("\nCommand for the run:\n  %s" % command)
     sys.stdout.flush()
-    java_proc = subprocess.Popen(command, shell=True)
+    java_proc = subprocess.Popen(command, shell=True, stdout=FNULL)
 
 def load_from_config(filename):
     global insert_rate, update_rate, query_rate, num_collections, total_runtime, time_to_ramp, ramp_interval, num_threads, gross_throughput, collection_ramp_size, working_set_docs, collection_ramp_rate, fail_at_ms, fail_at_throughput_factor, oplog, thread_ramp_rate, thread_ramp_size
@@ -244,7 +244,7 @@ while (go):
         passed=True
 
     # Failed run cases
-    if avg_response_time > fail_at_ms:
+    if not passed and avg_response_time > fail_at_ms:
         print("Average response time is over %s ms/op - test failed!" % fail_at_ms)
         if fail_run == False:
             fail_run=True
@@ -252,7 +252,7 @@ while (go):
         else:
             # If reaching here it means failing the 2nd run, no need to continue
             go=False
-    elif avg_throughput < targeted_throughput:
+    elif not passed and avg_throughput < targeted_throughput:
         print("Average throughput is less than %s - test failed!" % targeted_throughput) 
         if fail_run == False:
             fail_run=True
