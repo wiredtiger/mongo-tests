@@ -46,22 +46,8 @@ function prepare_test_env() {
 }
 
 function merge_wiredtiger_develop() { 
-	(cd src/third_party
-	curl -L https://api.github.com/repos/wiredtiger/wiredtiger/tarball/develop -o wiredtiger-wiredtiger-develop.tar.gz
-	tarball=$(echo wiredtiger-wiredtiger-*.tar.gz)
-	test -f "${tarball}"
-	mkdir -p wiredtiger
-	(cd wiredtiger;
-	 rm -rf *;
-	 git checkout -- .gitignore 'SCons*';
-	 git checkout -- 'build_*/wiredtiger_config.h')
-	tar -x --strip-components 1 \
-	    --exclude '*/api' --exclude '*/dist/package' --exclude '*/examples' \
-	    --exclude '*/src/docs' --exclude '*/test' \
-	    --exclude '*/tools/wtperf_stats' \
-	    --exclude '*/tools/wtstats/template' \
-	    -C wiredtiger -f ${tarball}
-	)
+	echo "Copying in wired tiger source using following command: " cp -a /data/mci/source-wiredtiger-*/. src/third_party/wiredtiger
+	cp -a /data/mci/source-wiredtiger-*/. src/third_party/wiredtiger
 }
 
 function build_mongod() { 
