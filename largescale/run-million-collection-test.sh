@@ -46,7 +46,11 @@ function prepare_test_env() {
 }
 
 function merge_wiredtiger_develop() {
-	ls ../../
+	ls -al ../../
+	echo "Printing head of wiredtiger log to confirm version."
+	cd ../../wiredtiger/
+	git log -1
+	cd -
 	echo "Copying in wiredtiger source using command: cp --verbose -a ../../wiredtiger/. src/third_party/wiredtiger/" 
 	cp --verbose -a ../../wiredtiger/. src/third_party/wiredtiger/
 }
@@ -75,6 +79,7 @@ function start_million_collection_test() {
 
 	cd mongo-tests
 	python largescale/run-test.py largescale/config/million-collection-testing | tee ../results/results.txt
+	cd ../../
 	exit ${PIPESTATUS[0]}
 }
 
