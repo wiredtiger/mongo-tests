@@ -46,8 +46,9 @@ function prepare_test_env() {
 }
 
 function merge_wiredtiger_develop() {
-	echo "Copying in wiredtiger source using command." 
-	cp -a ../wiredtiger/. src/third_party/wiredtiger/
+	ls ../../
+	echo "Copying in wiredtiger source using command: cp --verbose -a ../../wiredtiger/. src/third_party/wiredtiger/" 
+	cp --verbose -a ../../wiredtiger/. src/third_party/wiredtiger/
 }
 
 function build_mongod() { 
