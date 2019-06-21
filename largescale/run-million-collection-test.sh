@@ -45,9 +45,9 @@ function prepare_test_env() {
 	mkdir results
 }
 
-function merge_wiredtiger_develop() { 
-	echo "Copying in wired tiger source using following command: " cp -a /data/mci/source-wiredtiger-*/. src/third_party/wiredtiger
-	cp -a /data/mci/source-wiredtiger-*/. src/third_party/wiredtiger
+function merge_wiredtiger_develop() {
+	echo "Copying in wiredtiger source using command." 
+	cp -a ../wiredtiger/. src/third_party/wiredtiger/
 }
 
 function build_mongod() { 
