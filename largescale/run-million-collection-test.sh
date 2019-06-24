@@ -79,8 +79,9 @@ function start_million_collection_test() {
 
 	cd mongo-tests
 	python largescale/run-test.py largescale/config/million-collection-testing | tee ../results/results.txt
+	exit_code=${PIPESTATUS[0]}
 	cd ../../
-	exit ${PIPESTATUS[0]}
+	exit ${exit_code}
 }
 
 function main() { 
