@@ -198,7 +198,6 @@ fhandle = open(output_filename, 'a')
 fhandle.write("time,relative_time,inserts,collections,num_writes,write_latency,average_latency\n")
 start=time.time()
 go=True
-fail_run=False
 passed=False
 collections=collection_ramp_size
 threads=thread_ramp_size
@@ -246,20 +245,10 @@ while (go):
     # Failed run cases
     if not passed and avg_response_time > fail_at_ms:
         print("Average response time is over %s ms/op - test failed!" % fail_at_ms)
-        if fail_run == False:
-            fail_run=True
-            # Give it another run if fails the 1st time
-        else:
-            # If reaching here it means failing the 2nd run, no need to continue
-            go=False
+        go=False
     elif not passed and avg_throughput < targeted_throughput:
         print("Average throughput is less than %s - test failed!" % targeted_throughput) 
-        if fail_run == False:
-            fail_run=True
-            # Give it another run if fails the 1st time
-        else:
-            # If reaching here it means failing the 2nd run, no need to continue
-            go=False
+        go=False
 
     collections = int(collections * collection_ramp_rate)
     threads = int(threads * thread_ramp_rate)
