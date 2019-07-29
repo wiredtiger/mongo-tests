@@ -43,6 +43,7 @@ archive_stats_skips = [
 
 mongodb_branch_skips = [
     "3.0",
+    "3.2",
 ]
 
 match_jobs_set = False
