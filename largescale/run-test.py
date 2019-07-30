@@ -81,7 +81,7 @@ def populate_collections(client, collections):
             str3 = random_string(1)
             str4 = random_string(1)
             str5 = random_string(1)
-            for y in range(docs_per):
+            for y in range(int(docs_per)):
                 if y % bulkSize == 0 and y > 0:
                     bulk.execute()
                     bulk = client[dbname][ns].initialize_unordered_bulk_op()
