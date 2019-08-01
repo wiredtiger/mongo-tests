@@ -29,11 +29,17 @@ function prepare_test_env() {
 
 	# Clone other repos inside the test directory
 	cd ${TEST_DIR}
-	git clone ${MONGO_TESTS_REPO} || exit $?
 
+	cd ../../wiredtiger/
+	commit_date=`git log --pretty=format:"%cd" --date=iso -1`
+	echo $commit_date
+	cd -
+
+	git checkout `git rev-list -n 1 --first-parent --before="$commit_date" master`
 	# Install required modules
 	${PYTHON} -m pip install -r buildscripts/requirements.txt
-	pip install loremipsum
+
+	git clone ${MONGO_TESTS_REPO} || exit $?
 
 	# Copy POCDriver directory over from mongo-tests local repo
 	cp -r mongo-tests/largescale/POCDriver . 
@@ -46,13 +52,12 @@ function prepare_test_env() {
 }
 
 function merge_wiredtiger_develop() {
-	ls -al ../../
 	echo "Printing head of wiredtiger log to confirm version."
 	cd ../../wiredtiger/
 	git log -1
 	cd -
-	echo "Copying in wiredtiger source using command: cp --verbose -a ../../wiredtiger/. src/third_party/wiredtiger/" 
-	cp --verbose -a ../../wiredtiger/. src/third_party/wiredtiger/
+	echo "Copying in wiredtiger source using command: cp -a ../../wiredtiger/. src/third_party/wiredtiger/"
+	cp -a ../../wiredtiger/. src/third_party/wiredtiger/
 }
 
 function build_mongod() { 
