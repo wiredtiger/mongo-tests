@@ -29,16 +29,18 @@ function prepare_test_env() {
 
 	# Clone other repos inside the test directory
 	cd ${TEST_DIR}
-	pip install loremipsum
+	pip install loremipsum psutil
 
 	cd ../../wiredtiger/
 	commit_date=`git log --pretty=format:"%cd" --date=iso -1`
 	echo $commit_date
 	cd -
+	cd ${TEST_DIR}
 
 	git checkout `git rev-list -n 1 --first-parent --before="$commit_date" master`
 	# Install required modules
 	${PYTHON} -m pip install -r buildscripts/requirements.txt
+	${PYTHON} --version
 
 	git clone ${MONGO_TESTS_REPO} || exit $?
 
@@ -62,6 +64,7 @@ function merge_wiredtiger_develop() {
 }
 
 function build_mongod() { 
+	${PYTHON} -m pip install psutil pyyaml Cheetah3
 	${PYTHON} buildscripts/scons.py --variables-files=etc/scons/mongodbtoolchain_stable_gcc.vars ${PERF_MAKE_FLAGS} mongod || exit $?
 }
 
