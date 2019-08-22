@@ -18,11 +18,13 @@ strict_skips = [
 ]
 
 email_check_skip = [
-    "wiredtiger-syscall-linux",
     "wiredtiger-fault-inject",
     "mongodb-100gb-cache",
     "mongodb-million-collections",
-    "mongodb-million-collections-group-cols",
+    "wiredtiger-relevant-history-suite",
+    "wiredtiger-test-format-stress-relevant-history",
+    "wiredtiger-test-race-condition-stress-sanitizer-relevant-history",
+    "wiredtiger-test-checkpoint-stress-relevant-history",
 ]
 
 match_jobs = [
