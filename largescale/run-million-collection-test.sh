@@ -29,7 +29,7 @@ function prepare_test_env() {
 
 	# Clone other repos inside the test directory
 	cd ${TEST_DIR}
-	pip install loremipsum psutil
+	sudo pip install loremipsum psutil
 
 	cd ../../wiredtiger/
 	commit_date=`git log --pretty=format:"%cd" --date=iso -1`
