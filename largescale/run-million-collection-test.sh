@@ -79,7 +79,7 @@ function start_mongod(){
 	mkdir dbpath
 
 	# Start mongod process
-	./mongod -f mongo-tests/largescale/mongod.conf --dbpath ./db --logpath ./mongod.log
+	./mongod -f mongo-tests/largescale/mongod.conf 
 }
 
 function start_million_collection_test() {
