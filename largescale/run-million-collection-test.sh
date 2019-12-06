@@ -10,14 +10,15 @@ MONGO_TESTS_REPO="https://github.com/wiredtiger/mongo-tests"
 POCDRIVER_BRANCH="mongodb-million-collections"
 TEST_DIR="mongo-million-collection-test"
 PERF_MAKE_FLAGS="-j 20"
+PYTHON="python3"
 
 # Use mongodbtoolchain Python binary when possible
-if [ -f /opt/mongodbtoolchain/v3/bin/python3 ]; then 
-	PYTHON="/opt/mongodbtoolchain/v3/bin/python3"
-else
-	PYTHON="python3"
-fi
-
+# if [ -f /opt/mongodbtoolchain/v3/bin/python3 ]; then 
+# 	PYTHON="/opt/mongodbtoolchain/v3/bin/python3"
+# else
+# 	PYTHON="python3"
+# fi
+# 
 function prepare_test_env() { 
 	# Backup the old test directory if found
 	if [ -d ${TEST_DIR} ]; then
