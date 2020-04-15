@@ -91,7 +91,7 @@ function output_totals
 function run_ycsb
 {
     echo "$3 dataset $2 from $1"
-    $YCSB_BIN/ycsb $3 mongodb -s -P $1
+    $YCSB_BIN/ycsb $3 mongodb -s -P $1 &> $OUTPUT_DIR/$2-$3
     print_stats ${workload_name}-$3 $OUTPUT_DIR/$2-$3
     output_totals $2-$3
 }
