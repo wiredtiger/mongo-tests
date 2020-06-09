@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# /usr/bin/env bash
 # 
 # A script to prepare test environment and execute million collections testing.
 # 
@@ -9,6 +9,7 @@ MONGO_REPO="https://github.com/mongodb/mongo"
 MONGO_TESTS_REPO="https://github.com/wiredtiger/mongo-tests"
 POCDRIVER_BRANCH="mongodb-million-collections"
 TEST_DIR="mongo-million-collection-test"
+BIN_DIR="build/install/bin/"
 PERF_MAKE_FLAGS="-j 20"
 
 # Use mongodbtoolchain Python binary when possible
@@ -65,7 +66,7 @@ function merge_wiredtiger_develop() {
 
 function build_mongod() { 
 	${PYTHON} -m pip install psutil pyyaml Cheetah3
-	${PYTHON} buildscripts/scons.py --variables-files=etc/scons/mongodbtoolchain_stable_gcc.vars ${PERF_MAKE_FLAGS} mongod || exit $?
+	${PYTHON} buildscripts/scons.py --variables-files=etc/scons/mongodbtoolchain_stable_gcc.vars ${PERF_MAKE_FLAGS} install-mongod || exit $?
 }
 
 function start_mongod(){
@@ -79,7 +80,7 @@ function start_mongod(){
 	mkdir dbpath
 
 	# Start mongod process
-	./mongod -f mongo-tests/largescale/mongod.conf 
+	./${BIN_DIR}/mongod -f mongo-tests/largescale/mongod.conf 
 }
 
 function start_million_collection_test() {
