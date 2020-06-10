@@ -1,4 +1,4 @@
-# /usr/bin/env bash
+#! /usr/bin/env bash
 # 
 # A script to prepare test environment and execute million collections testing.
 # 
