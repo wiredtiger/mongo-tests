@@ -11,9 +11,16 @@ if [ ! -e $WORKLOAD_DIR ]; then
 	echo "Can't find workload directory: $WORKLOAD_DIR"
 	exit 1
 fi
-if [ ! -e $MONGODIR/mongod ]; then
-	echo "Can't find mongod executable"
-	exit 1
+
+# Hygenic build changed the installation path for the "mongod" binary, and the change is backported up to 4.4.
+# Try both the new (build/install/bin, for 4.4+) and the old (the current directory, 4.2-) installation paths.
+MONGOD_DIR=build/install/bin
+if [ ! -e ${MONGOD_DIR}/mongod ]; then
+	MONGOD_DIR=.
+	if [ ! -e ${MONGOD_DIR}/mongod ]; then
+		echo "Can't find mongod executable"
+		exit 1
+	fi
 fi
 
 # scrape_stat metric phase file
@@ -57,7 +64,7 @@ function reset_mongo
     cleanup
     sleep 3
     echo "starting mongod with config $1"
-    $MONGODIR/mongod --config $1 --dbpath $DATA_DIR --logpath $LOG_DIR/$2.log --fork >& /dev/null
+    ${MONGOD_DIR}/mongod --config $1 --dbpath $DATA_DIR --logpath $LOG_DIR/$2.log --fork >& /dev/null
     check_mongo_ready 0 $1
 }
 
@@ -69,7 +76,7 @@ function check_mongo_ready
 		echo "MongoDB was not running. Trying to start"
 		sleep 60
 		echo "starting mongod with config $2"
-		$MONGODIR/mongod --config $2 --dbpath $DATA_DIR --logpath $LOG_DIR/$2.log --fork >& /dev/null
+		${MONGOD_DIR}/mongod --config $2 --dbpath $DATA_DIR --logpath $LOG_DIR/$2.log --fork >& /dev/null
 		if [ $lap -lt 3 ]; then
 			check_mongo_ready $((lap+1)) $2
 		else
