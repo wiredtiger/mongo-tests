@@ -145,8 +145,9 @@ void find_and_modify(mongocxx::client &c, std::string coll_name){
     mongocxx::collection coll = c["mydb"][coll_name];
     while (running) {
         int id = get_next_record_id();
+        auto next_time = std::chrono::system_clock::now() - std::chrono::seconds(expire_duration_secs);
         bsoncxx::stdx::optional<bsoncxx::document::value> result = coll.find_one_and_update(
-            document{} << "id" << id << finalize,
+            document{} << "date" << open_document << "$lte" << bsoncxx::types::b_date(next_time) << close_document << finalize,
             document{} << "$set" << open_document
                     << "x" << gen_random_string(value_size_bytes) << close_document << finalize);
     }
