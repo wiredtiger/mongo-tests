@@ -8,6 +8,6 @@ fi
 
 rm -rf $1
 mkdir $1
-./build/install/bin/mongod --dbpath=$1 --wiredTigerCacheSizeGB=1 --setParameter ttlMonitorSleepSecs=15
-#db.adminCommand({setParameter:1, ttlMonitorSleepSecs:2})
-#internalQueryExecYieldIterations
+./build/install/bin/mongod --config=config
+sleep 5
+./build/install/bin/mongo --eval "rs.initiate()"

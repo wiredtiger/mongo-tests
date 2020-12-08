@@ -9,12 +9,13 @@ http://mongocxx.org/mongocxx-v3/installation/
 To compile run the following (change the location of your mongo-cxx-driver as required):
 
     export LD_LIBRARY_PATH=/opt/mongo-cxx-driver/lib/
-    export PKG_CONFIG_PATH=/opt/mongo-cxx-driver/lib/ pkgconfig/
+    export PKG_CONFIG_PATH=/opt/mongo-cxx-driver/lib/pkgconfig/
     c++ --std=c++11 repro.cpp $(pkg-config --cflags --libs libmongocxx) -lpthread -o repro
 
 To run (needs default mongod running):
-1. In your mongod repro run the ./runner.sh script, this will start your mongod and point it at the database directory passed specified on the command line.
+1. Copy the runner.sh script and mongod.config file to your mongod repro.
+2. In your mongod repro run the ./runner.sh script, this will start your mongod and point it at the database directory passed specified on the command line.
 
        ./runner.sh $DBPATH
-2. In a separate shell run ./repro
+3. In a separate shell run ./repro
 

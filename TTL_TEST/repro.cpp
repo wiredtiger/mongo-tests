@@ -29,26 +29,24 @@ mongocxx::pool pool{mongocxx::uri{}};
 
 
 /* SETTINGS */
-int doc_count = 1000; // Num docs per collection
+int doc_count = 20000; // Num docs per collection
 
-// Num find and modify threads, note that each collection has an insert thread associated with it.
-int thread_count = 10;
+// Number find and modify threads
+int update_thread_count = 20;
+// Number of reader threads
+int read_thread_count = 10;
 int collection_count = 1; // Num collections (currently can only be 1)
 
-// Time between min_id start and max_id start, the oldest document should be 120 seconds older
-// than the newest doc
-int alive_duration_secs = 120;
-
-// How old a document should be when it is added to the expired document list.
-int expire_duration_secs = 60;
-
-// The interval between each document in milliseconds, i.e. if we have X docs across a window of
-// alive_duration_secs how many milliseconds is between each doc?
-int doc_interval_millis = (alive_duration_secs * 1000) / doc_count;
-
-// The value that will be inserted into the document, and will get replaced by each find and modify.
+// The size of the value that will be inserted into the document, and will get replaced by each
+// update operation.
 int value_size_bytes = 100000;
 
+// The value itself which is copied and then modified prior to update.
+std::string big_val;
+
+// The range of documents to update for each update thread. They'll do a sequence updates starting
+// at a random key and then sequently updating the next doc_update_range keys.
+int doc_update_range = 300;
 
 /* VOLATILES */
 // Track global min and max document id's currently doesn't allow for multiple collections.
@@ -64,13 +62,14 @@ volatile bool running = true;
 // heavily towards the start of the range
 std::mt19937 gen;
 double interval[] = {0,   0.05, 0.1,   0.2,   1};
-double weights[] =  {0.8, 0.15, 0.025, 0.025, 0};
+double weights[] =  {0.2, 0.2, 0.2, 0.2, 0.2};
 
 // Create a global piecewise linear distribution, seems to work fine with multithreading.
 std::piecewise_linear_distribution<> id_distribution(std::begin(interval),
                                                 std::end(interval),
                                                 std::begin(weights));
 
+std::uniform_int_distribution<> replacement_distribution(0, sizeof(value_size_bytes));
 
 // Function to generate a random string to populate our values.
 std::string gen_random_string(const int len) {
@@ -93,63 +92,72 @@ static int get_next_record_id(){
     return std::floor(random * (max_id - min_id)) + min_id;
 }
 
+// The read thread, this thread tries to randomly read one value every 20 milliseconds
+void read_txn(mongocxx::client &c, std::string coll_name) {
+    mongocxx::collection coll = c["mydb"][coll_name];
+    mongocxx::read_concern snapshot{};
+    snapshot.acknowledge_level(mongocxx::read_concern::level::k_snapshot);
+    auto session = c.start_session();
+    while (running) {
+        int id = get_next_record_id();
+        mongocxx::options::transaction opts;
+        opts.read_concern(snapshot);
+        mongocxx::client_session::with_transaction_cb callback =
+            [&](mongocxx::client_session* session) {
+            coll.find_one(document{} << "id"
+            << id << finalize);
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        };
+        session.with_transaction(callback, opts);
+    }
+}
+
 // The insertion thread, this thread also updates the min_id.
+/*
 void insert(mongocxx::client &c, std::string coll_name) {
     mongocxx::collection coll = c["mydb"][coll_name];
     auto last_run = std::chrono::system_clock::now();
+    std::uniform_int_distribution<> distrib(0, doc_interval_millis);
+    mongocxx::read_concern snapshot{};
+    snapshot.acknowledge_level(mongocxx::read_concern::level::k_snapshot);
     int id_check = 0;
+    auto session = c.start_session();
     while (running) {
-        bool inserted = false;
-        // Loop until we've successfully inserted one doc.
-        do {
+        bool inserted = false;*/
+        /*do {
             bsoncxx::document::value doc_value = document{} << "date"
             <<  bsoncxx::types::b_date(last_run)
-            << "x" << gen_random_string(value_size_bytes)
+            << "x" << big_val
             << "id" << max_id << finalize;
             auto result = coll.insert_one(doc_value.view());
             if (result) {
                 inserted = true;
             }
         } while (!inserted);
-        max_id++;
-
-        // Every 10 runs update our minimum record id, log it for clarity.
-        if (id_check % 10 == 0) {
-            auto doc_result = coll.find_one({});
-            if (doc_result) {
-                bsoncxx::document::value doc = *doc_result;
-                auto id = doc.view()["id"].get_int32();
-                if (min_id < id) {
-                    min_id = id;
-                }
-            }
-            std::cout << "Min id: " << min_id << "Max id: " << max_id << std::endl;
-            id_check = 0;
-        }
-
-        // Loop until we need to insert our next document. If our insertion or id check takes longer
-        // than doc_interval_millis we'll gradually decrease our document set. This could be fixed
-        // but is a bit complicated.
-        auto next_time = std::chrono::system_clock::now();
-        while (next_time - last_run < std::chrono::milliseconds(doc_interval_millis)) {
-            next_time = std::chrono::system_clock::now();
-        }
-        last_run = next_time;
-        id_check++;
+        max_id++;*/
+        /*std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
-}
+}*/
 
-// The function that replaces each documents "x" field with a slightly modified version, unclear if
-// actually do need to modify it for the reproducer to work or if we could just insert the same.
+// The find and modify thread that replaces each documents "x" field with a slightly modified
+// version every 20 milliseconds.
 void find_and_modify(mongocxx::client &c, std::string coll_name){
     mongocxx::collection coll = c["mydb"][coll_name];
     while (running) {
         int id = get_next_record_id();
-        auto next_time = std::chrono::system_clock::now() - std::chrono::seconds(expire_duration_secs);
+        if (id > max_id - doc_update_range) {
+            id -= doc_update_range;
+        }
+        for (int i = 0; i < doc_update_range; ++i){
+        std::string next_val = big_val;
+        next_val[replacement_distribution(gen)] = gen_random_string(1)[0];
         bsoncxx::stdx::optional<bsoncxx::document::value> result = coll.find_one_and_update(
-            document{} << "date" << open_document << "$lte" << bsoncxx::types::b_date(next_time) << close_document << finalize,
+            document{} << "id" << id << finalize,
             document{} << "$set" << open_document
-                    << "x" << gen_random_string(value_size_bytes) << close_document << finalize);
+                    << "x" << next_val << close_document << finalize);
+            id++;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 }
 
@@ -159,16 +167,22 @@ void find_and_modify_func(std::string coll_name){
     find_and_modify(*c, coll_name);
 }
 
+void read_func(std::string coll_name){
+    auto c = pool.acquire();
+    read_txn(*c, coll_name);
+}
+
+/*
 void insert_func(std::string coll_name){
     auto c = pool.acquire();
     insert(*c, coll_name);
-}
+}*/
 
 int main(int argc, char * argv[]){
     // Make sure thread_count is divisible by collection count so each collection has an equal
     // number of threads operating on it, currently not meaningful as only 1 collection allowed due
     // to concurrency issues.
-    if (thread_count % collection_count != 0) {
+    if (update_thread_count % collection_count != 0) {
         return 1;
     }
     // Setup the test in this function creating the database, and populating it with an initial set
@@ -179,23 +193,16 @@ int main(int argc, char * argv[]){
     // of them, Make each doc doc_interval_millis older than the previous.
     std::vector<std::string> coll_names{};
 
-    auto start = std::chrono::system_clock::now();
+    big_val = gen_random_string(value_size_bytes);
     std::cout << "Beginning insert phase..." << std::endl;
     for (int i = 0; i < collection_count; i ++){
         std::string db_name = "test" + std::to_string(i);
         coll_names.push_back(db_name);
         mongocxx::collection coll = db[db_name];
         std::vector<bsoncxx::document::value> documents;
-        auto new_time = start;
         for (int j = 0; j < doc_count; j ++) {
-            new_time = new_time + std::chrono::milliseconds(doc_interval_millis);
-            // Our document looks like this {"date" : "DATETIME", "x" : "JUNK", "id", "ID"}
-            // we must have a datetime in it for TTL indexes to work, the id is to make find and
-            // modify easy. The big value is our generic data, designed to give the storage engine
-            // some work to do.
-            bsoncxx::document::value doc_value = document{} << "date"
-                <<  bsoncxx::types::b_date(new_time)
-                << "x" << gen_random_string(value_size_bytes)
+            // Our document looks like this {"x" : "big_val", "id", "ID"}
+            bsoncxx::document::value doc_value = document{} << "x" << big_val
                 << "id" << j << finalize;
             documents.push_back(doc_value);
         }
@@ -203,29 +210,21 @@ int main(int argc, char * argv[]){
     }
     std::cout << "Finished insert phase..." << std::endl;
 
-    // Create TTL indexes per collection. We may want to create an "id" index to prevent collection
-    // scans for each find and modify.
-    mongocxx::options::index index_options{};
-    index_options.expire_after(std::chrono::seconds(expire_duration_secs));
-    for (auto coll_name : coll_names){
-        auto index_specification = document{} << "date" << 1 << finalize;
-        db[coll_name].create_index(std::move(index_specification), index_options);
-        index_specification = document{} << "id" << 1 << finalize;
-        db[coll_name].create_index(std::move(index_specification));
-    }
-    std::cout << "Created TTL indexes..." << std::endl;
-
-    // Create the find and modify threads and insertion threads.
+    // Create the find and modify threads.
     std::vector<std::thread> threads{};
-    for (int i = 0; i < thread_count; i ++){
-        int col_id = std::floor(i / (double)(thread_count / collection_count));
+    for (int i = 0; i < update_thread_count; i ++){
+        int col_id = std::floor(i / (double)(update_thread_count / collection_count));
         std::thread t(find_and_modify_func, coll_names[col_id]);
         threads.push_back(std::move(t));
     }
-    for (auto coll_name: coll_names){
-        std::thread t(insert_func, coll_name);
-        threads.push_back(std::move(t));
+
+    // Create the read threads.
+    for (int i = 0; i < read_thread_count; i ++){
+        int col_id = std::floor(i / (double)(read_thread_count / collection_count));
+        std::thread t1(read_func, coll_names[col_id]);
+        threads.push_back(std::move(t1));
     }
+
     std::cout << "Created and started all threads..." << std::endl;
 
     while (running) {
