@@ -1,0 +1,36 @@
+diff --git a/src/mongo/db/exec/update_stage.cpp b/src/mongo/db/exec/update_stage.cpp
+index 1a57e80b85..9e72d39907 100644
+--- a/src/mongo/db/exec/update_stage.cpp
++++ b/src/mongo/db/exec/update_stage.cpp
+@@ -35,6 +35,9 @@
+
+ #include <algorithm>
+ #include <memory>
++#include <stdlib.h>
++#include <time.h>
++#include <stdio.h>
+
+ #include "mongo/base/status_with.h"
+ #include "mongo/bson/bson_comparator_interface_base.h"
+@@ -532,6 +535,10 @@ PlanStage::StageState UpdateStage::doWork(WorkingSetID* out) {
+             oldObj = member->doc.value().toBson().getOwned();
+         }
+
++        srand( (unsigned)time(NULL) );
++        opCtx()->sleepFor(Milliseconds(rand() % 100));
++
+         BSONObj newObj;
+         try {
+             // Do the update, get us the new version of the doc.
+diff --git a/src/third_party/wiredtiger/src/txn/txn_ckpt.c b/src/third_party/wiredtiger/src/txn/txn_ckpt.c
+index 9b3d1bb51f..119d751da1 100644
+--- a/src/third_party/wiredtiger/src/txn/txn_ckpt.c
++++ b/src/third_party/wiredtiger/src/txn/txn_ckpt.c
+@@ -875,6 +875,7 @@ __txn_checkpoint(WT_SESSION_IMPL *session, const char *cfg[])
+
+     /* Wait prior to checkpointing the history store to simulate checkpoint slowness. */
+     __checkpoint_timing_stress(session, true);
++    __wt_sleep(10, 0);
+
+     /*
+      * Get a history store dhandle. If the history store file is opened for a special operation this
