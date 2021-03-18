@@ -10,3 +10,4 @@ ramp_interval=300
 working_set_docs=40000000
 fail_at_ms=50
 fail_at_throughput_factor=0.75
+oplog=1
