@@ -1,0 +1,10 @@
+runtime=150
+insert=0
+update=70
+read=30
+throughput=100000
+thread=128
+collections=50000
+working_set_docs=50000000
+oplog=true
+populate=false
