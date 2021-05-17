@@ -10,7 +10,7 @@ MONGO_TESTS_REPO="https://github.com/wiredtiger/mongo-tests"
 POCDRIVER_BRANCH="mongodb-million-collections"
 TEST_DIR="mongo-million-collection-test"
 BIN_DIR="build/install/bin/"
-PERF_MAKE_FLAGS="-j 20"
+PERF_MAKE_FLAGS="-j $(nproc --all)"
 
 # Use mongodbtoolchain Python binary when possible
 if [ -f /opt/mongodbtoolchain/v3/bin/python3 ]; then 
