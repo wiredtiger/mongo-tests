@@ -227,17 +227,18 @@ def check_mongodb_builds(root, job):
         print("Error; Job %s doesn't have a matching branch on Github" % job)
     github_branches.remove(branch)
 
-# Grab all the mognodb branches on github into a list to remove from later
+# Grab all the mongodb branches on github into a list to remove from later
 def setup_mongodb_branches():
     global github_branches
     r = requests.get('https://api.github.com/repos/wiredtiger/wiredtiger/branches')
     if(r.ok):
         repoItem = json.loads(r.text or r.content)
         for i in repoItem:
-            if "mongodb-" in i["name"]:
-                m = re.search('(\d\.\d)', i["name"])
-                if m.groups(0)[0] not in mongodb_branch_skips:
-                    github_branches.append(m.groups(0)[0])
+            branch_name = i["name"]
+            if "mongodb-" in branch_name:
+                branch_name = branch_name.split("-",1)[1]
+                if branch_name not in mongodb_branch_skips:
+                    github_branches.append(branch_name)
 
 # Main - setup for local testing if requested
 parser = argparse.ArgumentParser()
