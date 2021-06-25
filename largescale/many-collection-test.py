@@ -27,7 +27,7 @@ limit_throughput = 10000
 working_set_docs = 1000000
 output_csv = "../results/out.csv"
 batch_size = 1
-oplog = False
+oplog = True
 populate = True
 
 output_filename = "results.csv"
@@ -166,11 +166,8 @@ def launch_server_status_collector(name, conf):
         time.sleep(collection_time_period)
         now = time.time()
     
-    # Put a "done" item on the queue to singla completion
+    # Put a "done" item on the queue to signal completion
     status_q.put({"__done_sending_req" : 1})
-
-    # Block till all the queue has been processed
-    status_q.join()
 
 def launch_server_status_processor(name, conf):
     status_q = conf[0]
@@ -514,6 +511,8 @@ def load_from_config(filename):
     global insert_rate, update_rate, query_rate, num_collections, run_duration, num_threads, limit_throughput, working_set_docs, oplog, populate
     with open(filename, "r") as f:
         for line in f:
+            if line.isspace():
+                continue
             arr = line.split('=')
             # Strip newline from the value
             val = arr[1].rstrip()
@@ -575,6 +574,7 @@ pool_configs.append(['dbstats', client, 10, run_duration])
 pool_configs.append(['collstats', client, 100, 0, num_collections, 5, run_duration])
 
 # Launch all threads
+success = True
 with concurrent.futures.ThreadPoolExecutor() as executor:
     futures = []
     for config in pool_configs:
@@ -582,6 +582,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
     for future in concurrent.futures.as_completed(futures):
         if future.result() != None:
             print_msg("main", 0, "Thread failed.")
+            success = False
 
 # Close the results file 
 fhandle.close()
@@ -589,4 +590,8 @@ fhandle.close()
 # Close the connection to server
 client.close()
 
-print_msg("main", 0, "Test Passed")
+if success:
+    print_msg("main", 0, "Test Passed")
+
+else:
+    print_msg("main", 0, "Test Failed")
