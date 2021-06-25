@@ -52,7 +52,7 @@ else
         exit
     fi
 
-    # Check if "$OUTPUT"/dbpath exists
+    # Check for existing data
     if [ ! -f "$OUTPUT"/dbpath ]; then
         echo "$OUTPUT"/dbpath does not exist ! No existing data can be reused.
     fi
@@ -78,7 +78,7 @@ fi
 
 python3 ../many-collection-test.py ../"$TEST_CFG"
 
-# Save
+# Save generated files
 cd ..
 BAK_DIR="$OUTPUT"-"$(date +%F-%H:%M)"
 mkdir "$BAK_DIR"
