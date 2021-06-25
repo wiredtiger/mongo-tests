@@ -71,8 +71,7 @@ mkdir -p mkdir dbpath;
 if pgrep -x "mongod" > /dev/null; then
     echo "-- Using already running mongod --"
 else
-    #WIREDTIGER_CONFIG="statistics=[all],statistics_log=(wait=1,json=true,on_close=true),file_manager=(close_handle_minimum=100,close_idle_time=30,close_scan_interval=30)," ../$"{MONGO_BIN}" -f ../mongod.conf
-    if ! WIREDTIGER_CONFIG="statistics=[all],statistics_log=(wait=1,json=true,on_close=true)," ../"${MONGO_BIN}" -f ../mongod.conf; then
+    if ! ../"${MONGO_BIN}" -f ../mongod.conf; then
         exit $?
     fi
 fi
