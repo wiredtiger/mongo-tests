@@ -2,35 +2,36 @@
 #
 # TODO
 #
-set -x
 
 usage () {
     cat << EOF
-Usage: $0 mongodb_bin test_cfg [task]
+Usage: $0 mongodb_bin test_cfg output [task]
 Arguments:
-    mongodb_bin  # Path to MongoDB binary
-    test_cfg     # Test configuration
-    task         # "clean-and-populate" to clean and populate
+    mongodb_bin # Path to MongoDB binary
+    test_cfg    # Test configuration
+    output      # Output directory
+    task        # "clean-and-populate" to clean and populate
 EOF
 }
 
-if [ $# -lt 2 ] || [ "$1" == "-h" ]; then
+if [ $# -lt 3 ] || [ "$1" == "-h" ]; then
     usage
     exit
 fi
 
 MONGO_BIN=$1
 TEST_CFG=$2
+OUTPUT=$3
 
-if [ "$3" == "clean-and-populate" ]; then
+if [ "$4" == "clean-and-populate" ]; then
     echo "-- Cleaning and populating --"
 
     killall -9 mongod
     # Sleep to give mongodb time to close completely
     sleep 2
-    rm -rf million-collection-test
+    rm -rf "$OUTPUT"
 
-    # Enabling populating phase if not required
+    # Enabling populating phase if missing in the test configuration
     if grep -qi "populate=false" "$TEST_CFG"; then
         cp "$TEST_CFG" "$TEST_CFG".tmp
         TEST_CFG=$TEST_CFG.tmp
@@ -41,7 +42,7 @@ if [ "$3" == "clean-and-populate" ]; then
 else
     echo "-- Using existing data --"
 
-    # Disabling populating phase if required
+    # Disabling populating phase if missing in the test configuration
     if ! grep -qi "populate=false" "$TEST_CFG"; then
         cp "$TEST_CFG" "$TEST_CFG".tmp
         TEST_CFG=$TEST_CFG.tmp
@@ -50,6 +51,11 @@ else
         TMP_FILE=$TEST_CFG
         exit
     fi
+
+    # Check if "$OUTPUT"/dbpath exists
+    if [ ! -f "$OUTPUT"/dbpath ]; then
+        echo "$OUTPUT"/dbpath does not exist ! No existing data can be reused.
+    fi
 fi
 
 # Clear the output of a previous run
@@ -57,8 +63,8 @@ rm -rf results
 mkdir results
 
 # Create folder if needed
-mkdir -p million-collection-test
-cd million-collection-test || exit
+mkdir -p "$OUTPUT"
+cd "$OUTPUT" || exit
 mkdir -p mkdir dbpath;
 
 # Try to reuse existing mongod process
@@ -75,14 +81,14 @@ python3 ../largescale/many-collection-test.py "../$TEST_CFG"
 
 # Save
 cd ..
-BAK_DIR="million-collection-test-$(date +%F-%H:%M)"
+BAK_DIR="$OUTPUT"-"$(date +%F-%H:%M)"
 mkdir "$BAK_DIR"
 mv results/ "$BAK_DIR"/.
-cp -r million-collection-test/dbpath/diagnostic.data "$BAK_DIR"/.
+cp -r "$OUTPUT"/dbpath/diagnostic.data "$BAK_DIR"/.
 mkdir "$BAK_DIR"/cfg
 cp "$TEST_CFG" "$BAK_DIR"/cfg/.
 
 # Clean temporary files
-if [ ! -z "$TMP_FILE" ]; then
+if [ -n "$TMP_FILE" ]; then
     rm "$TMP_FILE"
 fi
