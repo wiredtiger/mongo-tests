@@ -35,7 +35,7 @@ if [ "$4" == "clean-and-populate" ]; then
     if grep -qi "populate=false" "$TEST_CFG"; then
         cp "$TEST_CFG" "$TEST_CFG".tmp
         TEST_CFG=$TEST_CFG.tmp
-        echo forcing populate phase to false
+        echo forcing populate phase to true
         echo -e "\npopulate=true" >> "$TEST_CFG"
         TMP_FILE=$TEST_CFG
     fi
