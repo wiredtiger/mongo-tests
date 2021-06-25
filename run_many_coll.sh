@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# TODO
+# A script to prepare test environment and execute many collections testing.
 #
 
 usage () {
