@@ -57,7 +57,7 @@ def launch_poc_driver(name, conf):
     run_duration = conf[8]
     output_csv = conf[9]
     
-    command = ("java -jar ../largescale/POCDriver/bin/POCDriver.jar" \
+    command = ("java -jar ../POCDriver/bin/POCDriver.jar" \
                " -i " + str(insert_rate) + 
                " -u " + str(update_rate) +
                " -k " + str(query_rate) +
