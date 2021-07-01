@@ -49,11 +49,10 @@ else
         echo forcing populate phase to false
         echo -e "\npopulate=false" >> "$TEST_CFG"
         TMP_FILE=$TEST_CFG
-        exit
     fi
 
     # Check for existing data
-    if [ ! -f "$OUTPUT"/dbpath ]; then
+    if [ ! -d "$OUTPUT"/dbpath ]; then
         echo "$OUTPUT"/dbpath does not exist ! No existing data can be reused.
     fi
 fi
@@ -65,7 +64,7 @@ mkdir results
 # Create folder if needed
 mkdir -p "$OUTPUT"
 cd "$OUTPUT" || exit
-mkdir -p mkdir dbpath;
+mkdir -p dbpath;
 
 # Try to reuse existing mongod process
 if pgrep -x "mongod" > /dev/null; then
@@ -80,11 +79,11 @@ python3 ../many-collection-test.py ../"$TEST_CFG"
 
 # Save generated files
 cd ..
-BAK_DIR="$OUTPUT"-"$(date +%F-%H:%M)"
-mkdir "$BAK_DIR"
+BAK_DIR="$OUTPUT"-"$(date +%F-%H:%M:%S)"
+mkdir -p "$BAK_DIR"
 mv results/ "$BAK_DIR"/.
 cp -r "$OUTPUT"/dbpath/diagnostic.data "$BAK_DIR"/.
-mkdir "$BAK_DIR"/cfg
+mkdir -p "$BAK_DIR"/cfg
 cp "$TEST_CFG" "$BAK_DIR"/cfg/.
 
 # Clean temporary files
