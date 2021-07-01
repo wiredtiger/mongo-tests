@@ -9,7 +9,7 @@ Usage: $0 mongodb_bin test_cfg output [task]
 Arguments:
     mongodb_bin # Path to MongoDB binary
     test_cfg    # Test configuration
-    output      # Output directory
+    output      # Output directory, the current date will be appended to the name
     task        # "clean-and-populate" to clean and populate
 EOF
 }
