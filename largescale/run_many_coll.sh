@@ -49,11 +49,10 @@ else
         echo forcing populate phase to false
         echo -e "\npopulate=false" >> "$TEST_CFG"
         TMP_FILE=$TEST_CFG
-        exit
     fi
 
     # Check for existing data
-    if [ ! -f "$OUTPUT"/dbpath ]; then
+    if [ ! -d "$OUTPUT"/dbpath ]; then
         echo "$OUTPUT"/dbpath does not exist ! No existing data can be reused.
     fi
 fi
