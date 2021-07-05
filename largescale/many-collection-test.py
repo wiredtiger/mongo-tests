@@ -566,6 +566,9 @@ def load_from_config(filename):
             val = arr[1].rstrip()
             if arr[0] == "batch_size":
                 batch_size = int(val)
+                if batch_size <= 0:
+                    print_msg("config_validation", 0, "batch_size (%d) has to be greater than 0.")
+                    exit(123)
             if arr[0] == "collname":
                 collname = val
             if arr[0] == "conn_str":
