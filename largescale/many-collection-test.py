@@ -624,7 +624,7 @@ pool_configs = []
 server_status_q = queue.Queue()
 
 collection_time_period_s = 1
-pool_configs.append(['server_status_collector', client, server_status_q, collection_time_period, run_duration])
+pool_configs.append(['server_status_collector', client, server_status_q, collection_time_period_s, run_duration])
 
 pool_configs.append(['server_status_processor', server_status_q, run_duration])
 
