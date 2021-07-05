@@ -40,6 +40,7 @@ batch_size = 1
 collname = "POCCOLL"
 conn_str = 'mongodb://localhost:27017/'
 dbname = "POCDB"
+enable_stats_check = False
 insert_rate = 0
 limit_throughput = 10000
 num_collections = 1
@@ -553,7 +554,7 @@ def config_arg_to_bool(config, val):
 
 # Parse a configuration file.
 def load_from_config(filename):
-    global batch_size, collname, conn_str, dbname, insert_rate, limit_throughput, num_collections,\
+    global batch_size, collname, conn_str, dbname, enable_stats_check, insert_rate, limit_throughput, num_collections,\
     num_threads, oplog, output_csv, output_filename, populate, read_rate, run_duration,\
     verbose_level, working_set_docs
     with open(filename, "r") as f:
@@ -571,6 +572,8 @@ def load_from_config(filename):
                 conn_str = val
             if arr[0] == "dbname":
                 dbname = val
+            if arr[0] == "enable_stats_check":
+                enable_stats_check = config_arg_to_bool(arr[0], val)
             if arr[0] == "insert_rate":
                 insert_rate = int(val)
             if arr[0] == "limit_throughput":
