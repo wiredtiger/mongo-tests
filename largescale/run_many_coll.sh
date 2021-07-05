@@ -41,6 +41,12 @@ if [ "$4" == "clean-and-populate" ]; then
     fi
 else
     echo "-- Using existing data --"
+    # Check for existing data
+    if [ ! -d "$OUTPUT"/dbpath ]; then
+        echo "$OUTPUT"/dbpath does not exist ! No existing data can be reused.
+        echo Use the "clean-and-populate" task to generate a database.
+        exit
+    fi
 
     # Disabling populating phase if missing in the test configuration
     if ! grep -qi "populate=false" "$TEST_CFG"; then
@@ -49,11 +55,6 @@ else
         echo forcing populate phase to false
         echo -e "\npopulate=false" >> "$TEST_CFG"
         TMP_FILE=$TEST_CFG
-    fi
-
-    # Check for existing data
-    if [ ! -d "$OUTPUT"/dbpath ]; then
-        echo "$OUTPUT"/dbpath does not exist ! No existing data can be reused.
     fi
 fi
 
