@@ -197,6 +197,9 @@ def launch_server_status_processor(name, conf):
     status_q = conf[0]
     duration = conf[1]
 
+    # Throuput stats
+    throughput_stats = {"insert": 0, "query": 0, "update": 0}
+
     # Maintain 5 best/worst over the whole run of the stats being watched.
     ckpt = []
     ckpt_prepare = []
@@ -369,6 +372,11 @@ def launch_server_status_processor(name, conf):
                 extracted_test_data["checkpoint most recent handles skipped"][count], extracted_test_data["checkpoint most recent duration for gathering skipped handles (usecs)"][count]/1000
             ))
 
+        # Check for stalls
+        for stat in throughput_stats:
+            if(extracted_test_data[stat][count] == 0):
+                throughput_stats[stat] = throughput_stats[stat] + 1
+
         # Maintain best/worst stats.
         if len(inserts) < 5:
             heapq.heappush(inserts, -1 * extracted_test_data["insert"][count])
@@ -419,14 +427,14 @@ def launch_server_status_processor(name, conf):
         now = time.time()
         status_q.task_done()
 
-    print_msg("ServerStat", 0, "Total | Averages over whole run:")
+    print_msg("ServerStat", 0, "Total | Averages over whole run")
     print_msg("ServerStat", 0, "%5d | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
         (count, total_inserts/count, total_query/count, total_update/count,
         total_reads_latency/count, total_writes_latency/count, total_commands_latency/count,
         total_ckpt/count, total_ckpt_prepare/count
     ))
 
-    print_msg("ServerStat", 0, "   At | Five worsts over whole:")
+    print_msg("ServerStat", 0, "   At | Five worsts over whole run")
     for _ in range(5):
         print_msg("ServerStat", 0, "----- | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
             (-1 * heapq.heappop(inserts), -1 * heapq.heappop(query), -1 * heapq.heappop(update),
@@ -434,6 +442,9 @@ def launch_server_status_processor(name, conf):
             heapq.heappop(ckpt), heapq.heappop(ckpt_prepare)
     ))
 
+    print_msg("Stalls over whole run", 0, "")
+    for stat in throughput_stats:
+        print_msg("Number of " + stat + " stalled", 0, "%d" % throughput_stats[stat])
 
 # Workload and other executors mapping.
 exec_func_register = {
