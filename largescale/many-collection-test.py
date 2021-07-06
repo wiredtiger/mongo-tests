@@ -466,6 +466,10 @@ def launch_server_status_processor(name, conf):
                 worst_reads_latency_value, worst_writes_latency_value, worst_commands_latency_value,
                 worst_ckpt_duration_value, worst_ckpt_preparation_value))
 
+    print_msg("Stalls over whole run", 0, "")
+    for stat in throughput_stats:
+        print_msg("Number of " + stat + " stalled", 0, "%d" % throughput_stats[stat])
+
     global success
     if enable_stats_check:
 
