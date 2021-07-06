@@ -428,11 +428,18 @@ def launch_server_status_processor(name, conf):
         now = time.time()
         status_q.task_done()
 
+    avg_insert = total_inserts/count
+    avg_query = total_query/count
+    avg_update = total_update/count
+    avg_reads_latency = total_reads_latency/count
+    avg_writes_latency = total_writes_latency/count
+    avg_commands_latency = total_commands_latency/count
+    avg_ckpt_duration = total_ckpt/count
+    avg_ckpt_preparation = total_ckpt_prepare/count
     print_msg("ServerStat", 0, "Total | Averages over whole run")
     print_msg("ServerStat", 0, "%5d | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
-        (count, total_inserts/count, total_query/count, total_update/count,
-        total_reads_latency/count, total_writes_latency/count, total_commands_latency/count,
-        total_ckpt/count, total_ckpt_prepare/count
+        (count, avg_insert, avg_query, avg_update, avg_reads_latency, avg_writes_latency,
+        avg_commands_latency, avg_ckpt_duration, avg_ckpt_preparation
     ))
 
     worst_ckpt_duration_value = 0
@@ -472,31 +479,31 @@ def launch_server_status_processor(name, conf):
             print("Too many stalled updates: %d. Max allowed: %d" % (stalled_counters["update"], max_stalled_updates))
             success = False
         
-        if total_inserts/count < min_avg_inserts:
-            print("Average number of insert operations is too low: %d. Min allowed: %d" % (total_inserts/count, min_avg_inserts))
+        if avg_insert < min_avg_inserts:
+            print("Average number of insert operations is too low: %d. Min allowed: %d" % (avg_insert, min_avg_inserts))
             success = False
-        if total_query/count < min_avg_queries:
-            print("Average number of query operations is too low: %d. Min allowed: %d" % (total_query/count, min_avg_queries))
+        if avg_query < min_avg_queries:
+            print("Average number of query operations is too low: %d. Min allowed: %d" % (avg_query, min_avg_queries))
             success = False
-        if total_update/count < min_avg_updates:
-            print("Average number of update operations is too low: %d. Min allowed: %d" % (total_update/count, min_avg_updates))
-            success = False
-
-        if total_reads_latency/count > max_avg_reads_latency:
-            print("Average reads latency is too high: %d. Max allowed: %d" % (total_reads_latency/count, max_avg_reads_latency))
-            success = False
-        if total_writes_latency/count > max_avg_writes_latency:
-            print("Average writes latency is too high: %d. Max allowed: %d" % (total_writes_latency/count, max_avg_writes_latency))
-            success = False
-        if total_commands_latency/count > max_avg_commands_latency:
-            print("Average commands latency is too high: %d. Max allowed: %d" % (total_commands_latency/count, max_avg_commands_latency))
+        if avg_update < min_avg_updates:
+            print("Average number of update operations is too low: %d. Min allowed: %d" % (avg_update, min_avg_updates))
             success = False
 
-        if total_ckpt/count > max_avg_ckpt_duration:
-            print("Average checkpoint duration is too high: %d ms. Max allowed: %d ms" % (total_ckpt/count, max_avg_ckpt_duration))
+        if avg_reads_latency > max_avg_reads_latency:
+            print("Average reads latency is too high: %d. Max allowed: %d" % (avg_reads_latency, max_avg_reads_latency))
             success = False
-        if total_ckpt_prepare/count > max_avg_ckpt_preparation:
-            print("Average checkpoint preparation is too high: %d ms. Max allowed: %d ms" % (total_ckpt_prepare/count, max_avg_ckpt_preparation))
+        if avg_writes_latency > max_avg_writes_latency:
+            print("Average writes latency is too high: %d. Max allowed: %d" % (avg_writes_latency, max_avg_writes_latency))
+            success = False
+        if avg_commands_latency > max_avg_commands_latency:
+            print("Average commands latency is too high: %d. Max allowed: %d" % (avg_commands_latency, max_avg_commands_latency))
+            success = False
+
+        if avg_ckpt_duration > max_avg_ckpt_duration:
+            print("Average checkpoint duration is too high: %d ms. Max allowed: %d ms" % (avg_ckpt_duration, max_avg_ckpt_duration))
+            success = False
+        if avg_ckpt_preparation > max_avg_ckpt_preparation:
+            print("Average checkpoint preparation is too high: %d ms. Max allowed: %d ms" % (avg_ckpt_preparation, max_avg_ckpt_preparation))
             success = False
 
         if worst_ckpt_duration_value > worst_ckpt_duration:
