@@ -50,6 +50,7 @@ output_filename = "results.csv"
 populate = True
 read_rate = 0
 run_duration = 3600 * 12
+success = True
 update_rate = 100
 verbose_level = 0
 working_set_docs = 1000000
@@ -442,33 +443,45 @@ def launch_server_status_processor(name, conf):
             heapq.heappop(ckpt), heapq.heappop(ckpt_prepare)
     ))
 
+    global success
     if enable_stats_check:
 
         if stalled_counters["insert"] > max_stalled_inserts:
             print("Too many stalled inserts: %d. Max allowed: %d" % (stalled_counters["insert"], max_stalled_inserts))
+            success = False
         if stalled_counters["query"] > max_stalled_queries:
             print("Too many stalled queries: %d. Max allowed: %d" % (stalled_counters["query"], max_stalled_queries))
+            success = False
         if stalled_counters["update"] > max_stalled_updates:
             print("Too many stalled updates: %d. Max allowed: %d" % (stalled_counters["update"], max_stalled_updates))
+            success = False
         
         if total_inserts/count < min_avg_inserts:
             print("Average number of insert operations is too low: %d. Min allowed: %d" % (total_inserts/count, min_avg_inserts))
+            success = False
         if total_query/count < min_avg_queries:
             print("Average number of query operations is too low: %d. Min allowed: %d" % (total_query/count, min_avg_queries))
+            success = False
         if total_update/count < min_avg_updates:
             print("Average number of update operations is too low: %d. Min allowed: %d" % (total_update/count, min_avg_updates))
+            success = False
 
         if total_reads_latency/count > max_avg_reads_latency:
             print("Average reads latency is too high: %d. Max allowed: %d" % (total_reads_latency/count, max_avg_reads_latency))
+            success = False
         if total_writes_latency/count > max_avg_writes_latency:
             print("Average writes latency is too high: %d. Max allowed: %d" % (total_writes_latency/count, max_avg_writes_latency))
+            success = False
         if total_commands_latency/count > max_avg_commands_latency:
             print("Average commands latency is too high: %d. Max allowed: %d" % (total_commands_latency/count, max_avg_commands_latency))
+            success = False
 
         if total_ckpt/count > max_avg_ckpt_duration:
             print("Average checkpoint duration is too high: %d. Max allowed: %d" % (total_ckpt/count, max_avg_ckpt_duration))
+            success = False
         if total_ckpt_prepare/count > max_avg_ckpt_preparation:
             print("Average checkpoint preparation is too high: %d. Max allowed: %d" % (total_ckpt_prepare/count, max_avg_ckpt_preparation))
+            success = False
 
 # Workload and other executors mapping.
 exec_func_register = {
@@ -709,7 +722,6 @@ interval_s = 5
 pool_configs.append(['collstats', client, num_colls, coll_start, num_collections, interval_s, run_duration])
 
 # Launch all threads.
-success = True
 with concurrent.futures.ThreadPoolExecutor() as executor:
     futures = []
     for config in pool_configs:
@@ -726,7 +738,7 @@ fhandle.close()
 client.close()
 
 if success:
-    print_msg("main", 0, "Test Passed")
+    print_msg("main", 0, "SUCCESS")
 
 else:
-    print_msg("main", 0, "Test Failed")
+    print_msg("main", 0, "FAILED")
