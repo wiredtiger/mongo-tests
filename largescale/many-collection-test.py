@@ -199,7 +199,7 @@ def launch_server_status_processor(name, conf):
     duration = conf[1]
 
     # Throuput stats
-    throughput_stats = {"insert": 0, "query": 0, "update": 0}
+    stalled_counters = {"insert": 0, "query": 0, "update": 0}
 
     # Maintain 5 best/worst over the whole run of the stats being watched.
     ckpt = []
@@ -374,9 +374,9 @@ def launch_server_status_processor(name, conf):
             ))
 
         # Check for stalls
-        for stat in throughput_stats:
+        for stat in stalled_counters:
             if(extracted_test_data[stat][count] == 0):
-                throughput_stats[stat] = throughput_stats[stat] + 1
+                stalled_counters[stat] = stalled_counters[stat] + 1
 
         # Maintain best/worst stats.
         if len(inserts) < 5:
@@ -443,9 +443,33 @@ def launch_server_status_processor(name, conf):
             heapq.heappop(ckpt), heapq.heappop(ckpt_prepare)
     ))
 
-    print_msg("Stalls over whole run", 0, "")
-    for stat in throughput_stats:
-        print_msg("Number of " + stat + " stalled", 0, "%d" % throughput_stats[stat])
+    if enable_stats_check:
+
+        if stalled_counters["insert"] > max_stalled_inserts:
+            print("Too many stalled inserts: %d. Max allowed: %d" % (stalled_counters["insert"], max_stalled_inserts))
+        if stalled_counters["query"] > max_stalled_queries:
+            print("Too many stalled queries: %d. Max allowed: %d" % (stalled_counters["query"], max_stalled_queries))
+        if stalled_counters["update"] > max_stalled_updates:
+            print("Too many stalled updates: %d. Max allowed: %d" % (stalled_counters["update"], max_stalled_updates))
+        
+        if total_inserts/count < min_avg_inserts:
+            print("Average number of insert operations is too low: %d. Min allowed: %d" % (total_inserts/count, min_avg_inserts))
+        if total_query/count < min_avg_queries:
+            print("Average number of query operations is too low: %d. Min allowed: %d" % (total_query/count, min_avg_queries))
+        if total_update/count < min_avg_updates:
+            print("Average number of update operations is too low: %d. Min allowed: %d" % (total_update/count, min_avg_updates))
+
+        if total_reads_latency/count > max_avg_reads_latency:
+            print("Average reads latency is too high: %d. Max allowed: %d" % (total_reads_latency/count, max_avg_reads_latency))
+        if total_writes_latency/count > max_avg_writes_latency:
+            print("Average writes latency is too high: %d. Max allowed: %d" % (total_writes_latency/count, max_avg_writes_latency))
+        if total_commands_latency/count > max_avg_commands_latency:
+            print("Average commands latency is too high: %d. Max allowed: %d" % (total_commands_latency/count, max_avg_commands_latency))
+
+        if total_ckpt/count > max_avg_ckpt_duration:
+            print("Average checkpoint duration is too high: %d. Max allowed: %d" % (total_ckpt/count, max_avg_ckpt_duration))
+        if total_ckpt_prepare/count > max_avg_ckpt_preparation:
+            print("Average checkpoint preparation is too high: %d. Max allowed: %d" % (total_ckpt_prepare/count, max_avg_ckpt_preparation))
 
 # Workload and other executors mapping.
 exec_func_register = {
@@ -557,6 +581,9 @@ def load_from_config(filename):
     global batch_size, collname, conn_str, dbname, enable_stats_check, insert_rate, limit_throughput, num_collections,\
     num_threads, oplog, output_csv, output_filename, populate, read_rate, run_duration,\
     verbose_level, working_set_docs
+    global max_avg_commands_latency, max_avg_ckpt_duration, max_avg_ckpt_preparation, \
+    max_avg_reads_latency, max_avg_writes_latency, max_stalled_inserts, max_stalled_queries, \
+    max_stalled_updates, min_avg_inserts, min_avg_queries, min_avg_updates, num_collections
     with open(filename, "r") as f:
         for line in f:
             if line.isspace():
@@ -581,6 +608,28 @@ def load_from_config(filename):
                 insert_rate = int(val)
             if arr[0] == "limit_throughput":
                 limit_throughput = int(val)
+            if arr[0] == "max_avg_commands_latency":
+                max_avg_commands_latency = int(val)
+            if arr[0] == "max_avg_ckpt_duration":
+                max_avg_ckpt_duration = int(val)
+            if arr[0] == "max_avg_ckpt_preparation":
+                max_avg_ckpt_preparation = int(val)
+            if arr[0] == "max_avg_reads_latency":
+                max_avg_reads_latency = int(val)
+            if arr[0] == "max_avg_writes_latency":
+                max_avg_writes_latency = int(val)
+            if arr[0] == "max_stalled_inserts":
+                max_stalled_inserts = int(val)
+            if arr[0] == "max_stalled_queries":
+                max_stalled_queries = int(val)
+            if arr[0] == "max_stalled_updates":
+                max_stalled_updates = int(val)
+            if arr[0] == "min_avg_inserts":
+                min_avg_inserts = int(val)
+            if arr[0] == "min_avg_queries":
+                min_avg_queries = int(val)
+            if arr[0] == "min_avg_updates":
+                min_avg_updates = int(val)
             if arr[0] == "num_collections":
                 num_collections = int(val)
             if arr[0] == "num_thread":
