@@ -435,13 +435,29 @@ def launch_server_status_processor(name, conf):
         total_ckpt/count, total_ckpt_prepare/count
     ))
 
+    worst_ckpt_duration_value = 0
+    worst_ckpt_preparation_value = 0
+    worst_commands_latency_value = 0
+    worst_reads_latency_value = 0
+    worst_writes_latency_value = 0
     print_msg("ServerStat", 0, "   At | Five worsts over whole run")
-    for _ in range(5):
-        print_msg("ServerStat", 0, "----- | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
-            (-1 * heapq.heappop(inserts), -1 * heapq.heappop(query), -1 * heapq.heappop(update),
-            heapq.heappop(reads_latency), heapq.heappop(writes_latency), heapq.heappop(commands_latency),
-            heapq.heappop(ckpt), heapq.heappop(ckpt_prepare)
-    ))
+    for index in range(5):
+        if index < 4:
+            print_msg("ServerStat", 0, "----- | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
+                (-1 * heapq.heappop(inserts), -1 * heapq.heappop(query), -1 * heapq.heappop(update),
+                heapq.heappop(reads_latency), heapq.heappop(writes_latency),
+                heapq.heappop(commands_latency), heapq.heappop(ckpt), heapq.heappop(ckpt_prepare)))
+        else:
+            # Save the values for future check
+            worst_ckpt_duration_value = heapq.heappop(ckpt)
+            worst_ckpt_preparation_value = heapq.heappop(ckpt_prepare)
+            worst_commands_latency_value = heapq.heappop(commands_latency)
+            worst_reads_latency_value = heapq.heappop(reads_latency)
+            worst_writes_latency_value = heapq.heappop(writes_latency)
+            print_msg("ServerStat", 0, "----- | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
+                (-1 * heapq.heappop(inserts), -1 * heapq.heappop(query), -1 * heapq.heappop(update),
+                worst_reads_latency_value, worst_writes_latency_value, worst_commands_latency_value,
+                worst_ckpt_duration_value, worst_ckpt_preparation_value))
 
     global success
     if enable_stats_check:
@@ -477,10 +493,26 @@ def launch_server_status_processor(name, conf):
             success = False
 
         if total_ckpt/count > max_avg_ckpt_duration:
-            print("Average checkpoint duration is too high: %d. Max allowed: %d" % (total_ckpt/count, max_avg_ckpt_duration))
+            print("Average checkpoint duration is too high: %d ms. Max allowed: %d ms" % (total_ckpt/count, max_avg_ckpt_duration))
             success = False
         if total_ckpt_prepare/count > max_avg_ckpt_preparation:
-            print("Average checkpoint preparation is too high: %d. Max allowed: %d" % (total_ckpt_prepare/count, max_avg_ckpt_preparation))
+            print("Average checkpoint preparation is too high: %d ms. Max allowed: %d ms" % (total_ckpt_prepare/count, max_avg_ckpt_preparation))
+            success = False
+
+        if worst_ckpt_duration_value > worst_ckpt_duration:
+            print("Checkpoint duration has exceeded the limit: %d ms. Max allowed: %d ms" % (worst_ckpt_duration_value, worst_ckpt_duration))
+            success = False
+        if worst_ckpt_preparation_value > worst_ckpt_preparation:
+            print("Checkpoint preparation latency has exceeded the limit: %d ms. Max allowed: %d ms" % (worst_ckpt_preparation_value, worst_ckpt_preparation))
+            success = False
+        if worst_commands_latency_value > worst_commands_latency:
+            print("Commands latency has exceeded the limit: %d. Max allowed: %d" % (worst_commands_latency_value, worst_commands_latency))
+            success = False
+        if worst_reads_latency_value > worst_reads_latency:
+            print("Reads latency has exceeded the limit: %d. Max allowed: %d" % (worst_reads_latency_value, worst_reads_latency))
+            success = False
+        if worst_writes_latency_value > worst_writes_latency:
+            print("Writes latency has exceeded the limit: %d. Max allowed: %d" % (worst_writes_latency_value, worst_writes_latency))
             success = False
 
 # Workload and other executors mapping.
@@ -595,7 +627,9 @@ def load_from_config(filename):
     verbose_level, working_set_docs
     global max_avg_commands_latency, max_avg_ckpt_duration, max_avg_ckpt_preparation, \
     max_avg_reads_latency, max_avg_writes_latency, max_stalled_inserts, max_stalled_queries, \
-    max_stalled_updates, min_avg_inserts, min_avg_queries, min_avg_updates, num_collections
+    max_stalled_updates, min_avg_inserts, min_avg_queries, min_avg_updates, num_collections, \
+    worst_reads_latency, worst_writes_latency, worst_commands_latency, worst_ckpt_duration, \
+    worst_ckpt_preparation
     with open(filename, "r") as f:
         for line in f:
             if line.isspace():
@@ -661,6 +695,16 @@ def load_from_config(filename):
                 verbose_level = int(val)
             if arr[0] == "working_set_docs":
                 working_set_docs = int(val)
+            if arr[0] == "worst_reads_latency":
+                worst_reads_latency = int(val)
+            if arr[0] == "worst_writes_latency":
+                worst_writes_latency = int(val)
+            if arr[0] == "worst_commands_latency":
+                worst_commands_latency = int(val)
+            if arr[0] == "worst_ckpt_duration":
+                worst_ckpt_duration = int(val)
+            if arr[0] == "worst_ckpt_preparation":
+                worst_ckpt_preparation = int(val)
 
 # Main
 if len(sys.argv) > 1:
