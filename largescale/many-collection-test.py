@@ -19,7 +19,6 @@ import sys
 import subprocess
 import time
 from bson.binary import Binary
-from docopt import docopt
 from multiprocessing import Pool
 from pymongo import MongoClient
 
