@@ -198,7 +198,7 @@ def launch_server_status_processor(name, conf):
     status_q = conf[0]
     duration = conf[1]
 
-    # Throuput stats
+    # Throughput stats
     stalled_counters = {"insert": 0, "query": 0, "update": 0}
 
     # Maintain 5 best/worst over the whole run of the stats being watched.
