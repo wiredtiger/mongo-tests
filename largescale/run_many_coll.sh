@@ -78,6 +78,8 @@ fi
 
 python3 ../many-collection-test.py ../"$TEST_CFG"
 
+ERROR=$?
+
 # Save generated files
 cd ..
 BAK_DIR="$OUTPUT"-"$(date +%F-%H:%M:%S)"
@@ -91,3 +93,10 @@ cp "$TEST_CFG" "$BAK_DIR"/cfg/.
 if [ -n "$TMP_FILE" ]; then
     rm "$TMP_FILE"
 fi
+
+if [[ $ERROR -ne 0 ]]; then
+    echo FAILED
+    exit 1
+fi
+
+echo SUCCESS

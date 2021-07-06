@@ -738,7 +738,9 @@ fhandle.close()
 client.close()
 
 if success:
-    print_msg("main", 0, "SUCCESS")
+    print_msg("main", 0, "Test Passed")
+    sys.exit(0)
 
 else:
-    print_msg("main", 0, "FAILED")
+    print_msg("main", 0, "Test failed")
+    sys.exit(1)
