@@ -633,9 +633,11 @@ def config_arg_to_bool(config, val):
 
 # Parse a configuration file.
 def load_from_config(filename):
-    global batch_size, collname, conn_str, dbname, enable_stats_check, insert_rate, limit_throughput, num_collections,\
-    num_threads, oplog, output_csv, output_filename, populate, read_rate, run_duration,\
-    verbose_level, working_set_docs
+    # Workload parameters.
+    global batch_size, collname, conn_str, dbname, enable_stats_check, insert_rate, \
+    limit_throughput, num_collections, num_threads, oplog, output_csv, output_filename, populate, \
+    read_rate, run_duration, verbose_level, working_set_docs
+    # Performance thresholds.
     global max_avg_commands_latency, max_avg_ckpt_duration, max_avg_ckpt_preparation, \
     max_avg_reads_latency, max_avg_writes_latency, max_stalled_inserts, max_stalled_queries, \
     max_stalled_updates, min_avg_inserts, min_avg_queries, min_avg_updates, num_collections, \
