@@ -448,8 +448,9 @@ def launch_server_status_processor(name, conf):
     worst_reads_latency_value = 0
     worst_writes_latency_value = 0
     print_msg("ServerStat", 0, "   At | Five worsts over whole run")
-    for index in range(5):
-        if index < 4:
+    num_samples = min(5, len(inserts))
+    for index in range(num_samples):
+        if index < num_samples - 1:
             print_msg("ServerStat", 0, "----- | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
                 (-1 * heapq.heappop(inserts), -1 * heapq.heappop(query), -1 * heapq.heappop(update),
                 heapq.heappop(reads_latency), heapq.heappop(writes_latency),
