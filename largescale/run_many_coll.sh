@@ -20,10 +20,12 @@ if [ $# -lt 3 ] || [ "$1" == "-h" ]; then
 fi
 
 MONGO_BIN=$1
-TEST_CFG=$2
-OUTPUT=$3
+MONGO_LOG=$2
+TEST_CFG=$3
+OUTPUT=$4
+TASK=$5
 
-if [ "$4" == "clean-and-populate" ]; then
+if [ "$TASK" == "clean-and-populate" ]; then
     echo "-- Cleaning and populating --"
 
     killall -9 mongod
@@ -71,7 +73,7 @@ mkdir -p dbpath;
 if pgrep -x "mongod" > /dev/null; then
     echo "-- Using already running mongod --"
 else
-    if ! ../"${MONGO_BIN}" -f ../mongod.conf; then
+    if ! ../"$MONGO_BIN" -f ../mongod.conf --logpath "$MONGO_LOG"; then
         exit $?
     fi
 fi
@@ -79,6 +81,46 @@ fi
 python3 ../many-collection-test.py ../"$TEST_CFG"
 
 ERROR=$?
+
+kill "$(pgrep mongod)"
+
+# If we are using an existing mongod process, we need to start looking from the last
+# "SERVER RESTARTED" message in the logs.
+if [ "$TASK" == "clean-and-populate" ]; then
+    LAST_RESTART=0
+else
+    LAST_RESTART=$(grep -n "SERVER RESTARTED" "$MONGO_LOG"  | tail -1 | cut -d : -f 1)
+fi
+
+ELAPSED_TIME=0
+# Timeout before exiting the script if WT takes too long to stop.
+TIMEOUT=3600
+echo Waiting for mongod to stop...
+until [ "$ELAPSED_TIME" -ge "$TIMEOUT" ] || tail -n +"$LAST_RESTART" "$MONGO_LOG" | grep "WiredTiger closed" > /dev/null;
+do
+    sleep 1
+    ((ELAPSED_TIME=ELAPSED_TIME+1))
+    echo time elapsed... "$ELAPSED_TIME"s
+done
+
+STARTUP_TIME=$(grep "WiredTiger opened" "$MONGO_LOG" | tail -1 | awk '{print $5}' | grep -Eo '[0-9]{1,}')
+STARTUP_TIME_THRESHOLD=$(grep "max_startup_time" ../"$TEST_CFG" | grep -Eo '[0-9]{1,}')
+if [ "$STARTUP_TIME" -ge "$STARTUP_TIME_THRESHOLD" ]; then
+    echo "Startup time took too long: $STARTUP_TIME ms (max allowed: $STARTUP_TIME_THRESHOLD ms)"
+    ERROR=1
+fi
+
+if [ "$ELAPSED_TIME" -ge "$TIMEOUT" ]; then
+    echo WT took more than "$TIMEOUT"s to shut down. Forcing script to exit...
+    ERROR=1
+else
+    SHUTDOWN_TIME=$(grep "WiredTiger closed" "$MONGO_LOG" | tail -1 | awk '{print $5}' | grep -Eo '[0-9]{1,}')
+    SHUTDOWN_TIME_THRESHOLD=$(grep "max_shutdown_time" ../"$TEST_CFG" | grep -Eo '[0-9]{1,}')
+    if [ "$SHUTDOWN_TIME" -ge "$SHUTDOWN_TIME_THRESHOLD" ]; then
+        echo "Shutdown time took too long: $SHUTDOWN_TIME ms (max allowed: $SHUTDOWN_TIME_THRESHOLD ms)"
+        ERROR=1
+    fi
+fi
 
 # Save generated files
 cd ..
