@@ -19,7 +19,6 @@ import sys
 import subprocess
 import time
 from bson.binary import Binary
-from docopt import docopt
 from multiprocessing import Pool
 from pymongo import MongoClient
 
@@ -40,6 +39,7 @@ batch_size = 1
 collname = "POCCOLL"
 conn_str = 'mongodb://localhost:27017/'
 dbname = "POCDB"
+enable_stats_check = False
 insert_rate = 0
 limit_throughput = 10000
 num_collections = 1
@@ -50,6 +50,7 @@ output_filename = "results.csv"
 populate = True
 read_rate = 0
 run_duration = 3600 * 12
+success = True
 update_rate = 100
 verbose_level = 0
 working_set_docs = 1000000
@@ -196,6 +197,9 @@ def launch_server_status_collector(name, conf):
 def launch_server_status_processor(name, conf):
     status_q = conf[0]
     duration = conf[1]
+
+    # Throughput stats
+    stalled_counters = {"insert": 0, "query": 0, "update": 0}
 
     # Maintain 5 best/worst over the whole run of the stats being watched.
     ckpt = []
@@ -369,6 +373,11 @@ def launch_server_status_processor(name, conf):
                 extracted_test_data["checkpoint most recent handles skipped"][count], extracted_test_data["checkpoint most recent duration for gathering skipped handles (usecs)"][count]/1000
             ))
 
+        # Check for stalls
+        for stat in stalled_counters:
+            if(extracted_test_data[stat][count] == 0):
+                stalled_counters[stat] = stalled_counters[stat] + 1
+
         # Maintain best/worst stats.
         if len(inserts) < 5:
             heapq.heappush(inserts, -1 * extracted_test_data["insert"][count])
@@ -419,21 +428,103 @@ def launch_server_status_processor(name, conf):
         now = time.time()
         status_q.task_done()
 
-    print_msg("ServerStat", 0, "Total | Averages over whole run:")
+    avg_insert = total_inserts/count
+    avg_query = total_query/count
+    avg_update = total_update/count
+    avg_reads_latency = total_reads_latency/count
+    avg_writes_latency = total_writes_latency/count
+    avg_commands_latency = total_commands_latency/count
+    avg_ckpt_duration = total_ckpt/count
+    avg_ckpt_preparation = total_ckpt_prepare/count
+    print_msg("ServerStat", 0, "Total | Averages over whole run")
     print_msg("ServerStat", 0, "%5d | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
-        (count, total_inserts/count, total_query/count, total_update/count,
-        total_reads_latency/count, total_writes_latency/count, total_commands_latency/count,
-        total_ckpt/count, total_ckpt_prepare/count
+        (count, avg_insert, avg_query, avg_update, avg_reads_latency, avg_writes_latency,
+        avg_commands_latency, avg_ckpt_duration, avg_ckpt_preparation
     ))
 
-    print_msg("ServerStat", 0, "   At | Five worsts over whole:")
-    for _ in range(5):
-        print_msg("ServerStat", 0, "----- | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
-            (-1 * heapq.heappop(inserts), -1 * heapq.heappop(query), -1 * heapq.heappop(update),
-            heapq.heappop(reads_latency), heapq.heappop(writes_latency), heapq.heappop(commands_latency),
-            heapq.heappop(ckpt), heapq.heappop(ckpt_prepare)
-    ))
+    worst_ckpt_duration_value = 0
+    worst_ckpt_preparation_value = 0
+    worst_commands_latency_value = 0
+    worst_reads_latency_value = 0
+    worst_writes_latency_value = 0
+    print_msg("ServerStat", 0, "   At | Five worsts over whole run")
+    for index in range(5):
+        if index < 4:
+            print_msg("ServerStat", 0, "----- | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
+                (-1 * heapq.heappop(inserts), -1 * heapq.heappop(query), -1 * heapq.heappop(update),
+                heapq.heappop(reads_latency), heapq.heappop(writes_latency),
+                heapq.heappop(commands_latency), heapq.heappop(ckpt), heapq.heappop(ckpt_prepare)))
+        else:
+            # Save the values for future check
+            worst_ckpt_duration_value = heapq.heappop(ckpt)
+            worst_ckpt_preparation_value = heapq.heappop(ckpt_prepare)
+            worst_commands_latency_value = heapq.heappop(commands_latency)
+            worst_reads_latency_value = heapq.heappop(reads_latency)
+            worst_writes_latency_value = heapq.heappop(writes_latency)
+            print_msg("ServerStat", 0, "----- | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
+                (-1 * heapq.heappop(inserts), -1 * heapq.heappop(query), -1 * heapq.heappop(update),
+                worst_reads_latency_value, worst_writes_latency_value, worst_commands_latency_value,
+                worst_ckpt_duration_value, worst_ckpt_preparation_value))
 
+    print_msg("Stalls over whole run", 0, "")
+    for stat in stalled_counters:
+        print_msg("Number of " + stat + " stalled", 0, "%d" % stalled_counters[stat])
+
+    global success
+    if enable_stats_check:
+
+        if stalled_counters["insert"] > max_stalled_inserts:
+            print("Too many stalled inserts: %d. Max allowed: %d" % (stalled_counters["insert"], max_stalled_inserts))
+            success = False
+        if stalled_counters["query"] > max_stalled_queries:
+            print("Too many stalled queries: %d. Max allowed: %d" % (stalled_counters["query"], max_stalled_queries))
+            success = False
+        if stalled_counters["update"] > max_stalled_updates:
+            print("Too many stalled updates: %d. Max allowed: %d" % (stalled_counters["update"], max_stalled_updates))
+            success = False
+        
+        if avg_insert < min_avg_inserts:
+            print("Average number of insert operations is too low: %d. Min allowed: %d" % (avg_insert, min_avg_inserts))
+            success = False
+        if avg_query < min_avg_queries:
+            print("Average number of query operations is too low: %d. Min allowed: %d" % (avg_query, min_avg_queries))
+            success = False
+        if avg_update < min_avg_updates:
+            print("Average number of update operations is too low: %d. Min allowed: %d" % (avg_update, min_avg_updates))
+            success = False
+
+        if avg_reads_latency > max_avg_reads_latency:
+            print("Average reads latency is too high: %d. Max allowed: %d" % (avg_reads_latency, max_avg_reads_latency))
+            success = False
+        if avg_writes_latency > max_avg_writes_latency:
+            print("Average writes latency is too high: %d. Max allowed: %d" % (avg_writes_latency, max_avg_writes_latency))
+            success = False
+        if avg_commands_latency > max_avg_commands_latency:
+            print("Average commands latency is too high: %d. Max allowed: %d" % (avg_commands_latency, max_avg_commands_latency))
+            success = False
+
+        if avg_ckpt_duration > max_avg_ckpt_duration:
+            print("Average checkpoint duration is too high: %d ms. Max allowed: %d ms" % (avg_ckpt_duration, max_avg_ckpt_duration))
+            success = False
+        if avg_ckpt_preparation > max_avg_ckpt_preparation:
+            print("Average checkpoint preparation is too high: %d ms. Max allowed: %d ms" % (avg_ckpt_preparation, max_avg_ckpt_preparation))
+            success = False
+
+        if worst_ckpt_duration_value > worst_ckpt_duration:
+            print("Checkpoint duration has exceeded the limit: %d ms. Max allowed: %d ms" % (worst_ckpt_duration_value, worst_ckpt_duration))
+            success = False
+        if worst_ckpt_preparation_value > worst_ckpt_preparation:
+            print("Checkpoint preparation latency has exceeded the limit: %d ms. Max allowed: %d ms" % (worst_ckpt_preparation_value, worst_ckpt_preparation))
+            success = False
+        if worst_commands_latency_value > worst_commands_latency:
+            print("Commands latency has exceeded the limit: %d. Max allowed: %d" % (worst_commands_latency_value, worst_commands_latency))
+            success = False
+        if worst_reads_latency_value > worst_reads_latency:
+            print("Reads latency has exceeded the limit: %d. Max allowed: %d" % (worst_reads_latency_value, worst_reads_latency))
+            success = False
+        if worst_writes_latency_value > worst_writes_latency:
+            print("Writes latency has exceeded the limit: %d. Max allowed: %d" % (worst_writes_latency_value, worst_writes_latency))
+            success = False
 
 # Workload and other executors mapping.
 exec_func_register = {
@@ -542,12 +633,19 @@ def config_arg_to_bool(config, val):
 
 # Parse a configuration file.
 def load_from_config(filename):
-    global batch_size, collname, conn_str, dbname, insert_rate, limit_throughput, num_collections,\
-    num_threads, oplog, output_csv, output_filename, populate, read_rate, run_duration,\
-    verbose_level, working_set_docs
+    # Workload parameters.
+    global batch_size, collname, conn_str, dbname, enable_stats_check, insert_rate, \
+    limit_throughput, num_collections, num_threads, oplog, output_csv, output_filename, populate, \
+    read_rate, run_duration, verbose_level, working_set_docs
+    # Performance thresholds.
+    global max_avg_commands_latency, max_avg_ckpt_duration, max_avg_ckpt_preparation, \
+    max_avg_reads_latency, max_avg_writes_latency, max_stalled_inserts, max_stalled_queries, \
+    max_stalled_updates, min_avg_inserts, min_avg_queries, min_avg_updates, num_collections, \
+    worst_reads_latency, worst_writes_latency, worst_commands_latency, worst_ckpt_duration, \
+    worst_ckpt_preparation
     with open(filename, "r") as f:
         for line in f:
-            if line.isspace():
+            if line.isspace() or line.startswith('#'):
                 continue
             arr = line.split('=')
             # Strip newline from the value.
@@ -560,10 +658,34 @@ def load_from_config(filename):
                 conn_str = val
             if arr[0] == "dbname":
                 dbname = val
+            if arr[0] == "enable_stats_check":
+                enable_stats_check = config_arg_to_bool(arr[0], val)
             if arr[0] == "insert_rate":
                 insert_rate = int(val)
             if arr[0] == "limit_throughput":
                 limit_throughput = int(val)
+            if arr[0] == "max_avg_commands_latency":
+                max_avg_commands_latency = int(val)
+            if arr[0] == "max_avg_ckpt_duration":
+                max_avg_ckpt_duration = int(val)
+            if arr[0] == "max_avg_ckpt_preparation":
+                max_avg_ckpt_preparation = int(val)
+            if arr[0] == "max_avg_reads_latency":
+                max_avg_reads_latency = int(val)
+            if arr[0] == "max_avg_writes_latency":
+                max_avg_writes_latency = int(val)
+            if arr[0] == "max_stalled_inserts":
+                max_stalled_inserts = int(val)
+            if arr[0] == "max_stalled_queries":
+                max_stalled_queries = int(val)
+            if arr[0] == "max_stalled_updates":
+                max_stalled_updates = int(val)
+            if arr[0] == "min_avg_inserts":
+                min_avg_inserts = int(val)
+            if arr[0] == "min_avg_queries":
+                min_avg_queries = int(val)
+            if arr[0] == "min_avg_updates":
+                min_avg_updates = int(val)
             if arr[0] == "num_collections":
                 num_collections = int(val)
             if arr[0] == "num_thread":
@@ -586,6 +708,16 @@ def load_from_config(filename):
                 verbose_level = int(val)
             if arr[0] == "working_set_docs":
                 working_set_docs = int(val)
+            if arr[0] == "worst_reads_latency":
+                worst_reads_latency = int(val)
+            if arr[0] == "worst_writes_latency":
+                worst_writes_latency = int(val)
+            if arr[0] == "worst_commands_latency":
+                worst_commands_latency = int(val)
+            if arr[0] == "worst_ckpt_duration":
+                worst_ckpt_duration = int(val)
+            if arr[0] == "worst_ckpt_preparation":
+                worst_ckpt_preparation = int(val)
 
 # Main
 if len(sys.argv) > 1:
@@ -647,7 +779,6 @@ interval_s = 5
 pool_configs.append(['collstats', client, num_colls, coll_start, num_collections, interval_s, run_duration])
 
 # Launch all threads.
-success = True
 with concurrent.futures.ThreadPoolExecutor() as executor:
     futures = []
     for config in pool_configs:
@@ -665,6 +796,8 @@ client.close()
 
 if success:
     print_msg("main", 0, "Test Passed")
+    sys.exit(0)
 
 else:
-    print_msg("main", 0, "Test Failed")
+    print_msg("main", 0, "Test failed")
+    sys.exit(1)
