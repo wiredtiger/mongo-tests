@@ -1,6 +1,16 @@
-enable_stats_check=true
+# Config parameters
 insert_rate=0
 limit_throughput=100000
+num_collections=10000
+num_thread=128
+oplog=true
+populate=false
+read_rate=30
+run_duration=150
+update_rate=70
+working_set_docs=50000000
+# Thresholds if configured
+enable_stats_check=true
 max_avg_commands_latency=80000
 max_avg_ckpt_duration=20000
 max_avg_ckpt_preparation=600
@@ -12,14 +22,6 @@ max_stalled_updates=20
 min_avg_inserts=5
 min_avg_queries=500
 min_avg_updates=1500
-num_collections=10000
-num_thread=128
-oplog=true
-populate=false
-read_rate=30
-run_duration=150
-update_rate=70
-working_set_docs=50000000
 worst_ckpt_duration=30000
 worst_ckpt_preparation=1500
 worst_commands_latency=350000

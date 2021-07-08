@@ -645,7 +645,7 @@ def load_from_config(filename):
     worst_ckpt_preparation
     with open(filename, "r") as f:
         for line in f:
-            if line.isspace():
+            if line.isspace() or line.startswith('#'):
                 continue
             arr = line.split('=')
             # Strip newline from the value.
