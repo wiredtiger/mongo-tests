@@ -83,7 +83,7 @@ python3 ../many-collection-test.py ../"$TEST_CFG"
 
 ERROR=$?
 
-# Check for startup and shutdown time if required.
+# Check for start up and shut down time if required.
 ENABLE_CHECK=$(grep "enable_stats_check" ../"$TEST_CFG" | cut -d = -f 2)
 if [ "$ENABLE_CHECK" == "true" ]; then
     kill "$(pgrep mongod)"
@@ -109,6 +109,7 @@ if [ "$ENABLE_CHECK" == "true" ]; then
 
     STARTUP_TIME=$(grep "WiredTiger opened" "$MONGO_LOG" | tail -1 | awk '{print $5}' | grep -Eo '[0-9]{1,}')
     STARTUP_TIME_THRESHOLD=$(grep "max_startup_time" ../"$TEST_CFG" | grep -Eo '[0-9]{1,}')
+    echo WT took "$STARTUP_TIME" ms to start up
     if [ "$STARTUP_TIME" -ge "$STARTUP_TIME_THRESHOLD" ]; then
         echo "Startup time took too long: $STARTUP_TIME ms (max allowed: $STARTUP_TIME_THRESHOLD ms)"
         ERROR=1
@@ -120,6 +121,7 @@ if [ "$ENABLE_CHECK" == "true" ]; then
     else
         SHUTDOWN_TIME=$(grep "WiredTiger closed" "$MONGO_LOG" | tail -1 | awk '{print $5}' | grep -Eo '[0-9]{1,}')
         SHUTDOWN_TIME_THRESHOLD=$(grep "max_shutdown_time" ../"$TEST_CFG" | grep -Eo '[0-9]{1,}')
+        echo WT took "$SHUTDOWN_TIME" ms to shut down
         if [ "$SHUTDOWN_TIME" -ge "$SHUTDOWN_TIME_THRESHOLD" ]; then
             echo "Shutdown time took too long: $SHUTDOWN_TIME ms (max allowed: $SHUTDOWN_TIME_THRESHOLD ms)"
             ERROR=1
