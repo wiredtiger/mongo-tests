@@ -82,6 +82,7 @@ python3 ../many-collection-test.py ../"$TEST_CFG"
 
 ERROR=$?
 
+# Check for startup and shutdown time if required.
 ENABLE_CHECK=$(grep "enable_stats_check" ../"$TEST_CFG" | cut -d = -f 2)
 if [ "$ENABLE_CHECK" == "true" ]; then
     kill "$(pgrep mongod)"
@@ -94,9 +95,9 @@ if [ "$ENABLE_CHECK" == "true" ]; then
         LAST_RESTART=$(grep -n "SERVER RESTARTED" "$MONGO_LOG"  | tail -1 | cut -d : -f 1)
     fi
 
-    ELAPSED_TIME=0
     # Timeout before exiting the script if WT takes too long to stop.
     TIMEOUT=3600
+    ELAPSED_TIME=0
     echo Waiting for mongod to stop...
     until [ "$ELAPSED_TIME" -ge "$TIMEOUT" ] || tail -n +"$LAST_RESTART" "$MONGO_LOG" | grep "WiredTiger closed" > /dev/null;
     do
