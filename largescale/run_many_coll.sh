@@ -47,7 +47,8 @@ else
     if [ ! -d "$OUTPUT"/dbpath ]; then
         echo "$OUTPUT"/dbpath does not exist ! No existing data can be reused.
         echo Use the "clean-and-populate" task to generate a database.
-        exit
+        echo FAILED
+        exit 1
     fi
 
     # Disabling populating phase if missing in the test configuration
@@ -66,7 +67,7 @@ mkdir results
 
 # Create folder if needed
 mkdir -p "$OUTPUT"
-cd "$OUTPUT" || exit
+cd "$OUTPUT" || exit 1
 mkdir -p dbpath;
 
 # Try to reuse existing mongod process
