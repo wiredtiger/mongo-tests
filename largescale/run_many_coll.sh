@@ -5,9 +5,10 @@
 
 usage () {
     cat << EOF
-Usage: $0 mongodb_bin test_cfg output [task]
+Usage: $0 mongodb_bin longo_logs test_cfg output [task]
 Arguments:
-    mongodb_bin # Path to MongoDB binary
+    mongodb_bin # MongoDB binary
+    longo_logs  # MongoDB logs
     test_cfg    # Test configuration
     output      # Output directory, the current date will be appended to the name
     task        # "clean-and-populate" to clean and populate
