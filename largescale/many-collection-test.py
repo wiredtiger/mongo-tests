@@ -788,11 +788,15 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
         if future.result() != None:
             print_msg("main", 0, "Thread failed.")
             success = False
+        else:
+            print_msg("main", 2, "One thread finished working !")
 
 # Close the results file.
+print_msg("main", 0, "Closing results file...")
 fhandle.close()
 
 # Close the connection to server.
+print_msg("main", 0, "Closing client's connection...")
 client.close()
 
 if success:
