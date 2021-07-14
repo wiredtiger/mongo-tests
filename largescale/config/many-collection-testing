@@ -1,7 +1,7 @@
 # Config parameters
 insert_rate=0
 limit_throughput=100000
-num_collections=100000
+num_collections=75000
 num_thread=128
 oplog=true
 populate=false
