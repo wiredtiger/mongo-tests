@@ -49,7 +49,7 @@ output_csv = "../results/out.csv"
 output_filename = "results.csv"
 populate = True
 read_rate = 0
-run_duration = 3600 * 12
+run_duration = 3600
 success = True
 update_rate = 100
 verbose_level = 0
@@ -448,8 +448,9 @@ def launch_server_status_processor(name, conf):
     worst_reads_latency_value = 0
     worst_writes_latency_value = 0
     print_msg("ServerStat", 0, "   At | Five worsts over whole run")
-    for index in range(5):
-        if index < 4:
+    num_samples = min(5, len(inserts))
+    for index in range(num_samples):
+        if index < num_samples - 1:
             print_msg("ServerStat", 0, "----- | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
                 (-1 * heapq.heappop(inserts), -1 * heapq.heappop(query), -1 * heapq.heappop(update),
                 heapq.heappop(reads_latency), heapq.heappop(writes_latency),
@@ -787,11 +788,15 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
         if future.result() != None:
             print_msg("main", 0, "Thread failed.")
             success = False
+        else:
+            print_msg("main", 2, "One thread finished working !")
 
 # Close the results file.
+print_msg("main", 0, "Closing results file...")
 fhandle.close()
 
 # Close the connection to server.
+print_msg("main", 0, "Closing client's connection...")
 client.close()
 
 if success:

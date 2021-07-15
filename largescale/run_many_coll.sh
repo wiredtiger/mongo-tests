@@ -5,9 +5,10 @@
 
 usage () {
     cat << EOF
-Usage: $0 mongodb_bin test_cfg output [task]
+Usage: $0 mongodb_bin mongo_logs test_cfg output [task]
 Arguments:
-    mongodb_bin # Path to MongoDB binary
+    mongodb_bin # MongoDB binary
+    mongo_logs  # MongoDB logs
     test_cfg    # Test configuration
     output      # Output directory, the current date will be appended to the name
     task        # "clean-and-populate" to clean and populate
@@ -20,10 +21,12 @@ if [ $# -lt 3 ] || [ "$1" == "-h" ]; then
 fi
 
 MONGO_BIN=$1
-TEST_CFG=$2
-OUTPUT=$3
+MONGO_LOG=$2
+TEST_CFG=$3
+OUTPUT=$4
+TASK=$5
 
-if [ "$4" == "clean-and-populate" ]; then
+if [ "$TASK" == "clean-and-populate" ]; then
     echo "-- Cleaning and populating --"
 
     killall -9 mongod
@@ -45,7 +48,8 @@ else
     if [ ! -d "$OUTPUT"/dbpath ]; then
         echo "$OUTPUT"/dbpath does not exist ! No existing data can be reused.
         echo Use the "clean-and-populate" task to generate a database.
-        exit
+        echo FAILED
+        exit 1
     fi
 
     # Disabling populating phase if missing in the test configuration
@@ -64,14 +68,14 @@ mkdir results
 
 # Create folder if needed
 mkdir -p "$OUTPUT"
-cd "$OUTPUT" || exit
+cd "$OUTPUT" || exit 1
 mkdir -p dbpath;
 
 # Try to reuse existing mongod process
 if pgrep -x "mongod" > /dev/null; then
     echo "-- Using already running mongod --"
 else
-    if ! ../"${MONGO_BIN}" -f ../mongod.conf; then
+    if ! ../"$MONGO_BIN" -f ../mongod.conf --logpath "$MONGO_LOG"; then
         exit $?
     fi
 fi
@@ -79,6 +83,58 @@ fi
 python3 ../many-collection-test.py ../"$TEST_CFG"
 
 ERROR=$?
+
+# Check for start up and shut down time if required.
+ENABLE_CHECK=$(grep "enable_stats_check" ../"$TEST_CFG" | cut -d = -f 2)
+if [ "$ENABLE_CHECK" == "true" ]; then
+
+    if ! pgrep mongod >/dev/null; then
+        echo ERROR - mongod process not found
+        exit 1
+    fi
+
+    kill "$(pgrep mongod)"
+
+    # If we are using an existing mongod process, we need to start looking from the last
+    # "SERVER RESTARTED" message in the logs.
+    if [ "$TASK" == "clean-and-populate" ]; then
+        LAST_RESTART=0
+    else
+        LAST_RESTART=$(grep -n "SERVER RESTARTED" "$MONGO_LOG"  | tail -1 | cut -d : -f 1)
+    fi
+
+    # Timeout before exiting the script if WT takes too long to stop.
+    TIMEOUT=3600
+    ELAPSED_TIME=0
+    echo Waiting for mongod to stop...
+    until [ "$ELAPSED_TIME" -ge "$TIMEOUT" ] || tail -n +"$LAST_RESTART" "$MONGO_LOG" | grep "WiredTiger closed" > /dev/null;
+    do
+        sleep 1
+        ((ELAPSED_TIME=ELAPSED_TIME+1))
+        echo time elapsed... "$ELAPSED_TIME"s
+    done
+
+    STARTUP_TIME=$(grep "WiredTiger opened" "$MONGO_LOG" | tail -1 | awk '{print $5}' | grep -Eo '[0-9]{1,}')
+    STARTUP_TIME_THRESHOLD=$(grep "max_startup_time" ../"$TEST_CFG" | grep -Eo '[0-9]{1,}')
+    echo WT took "$STARTUP_TIME" ms to start up
+    if [ "$STARTUP_TIME" -ge "$STARTUP_TIME_THRESHOLD" ]; then
+        echo "Startup time took too long: $STARTUP_TIME ms (max allowed: $STARTUP_TIME_THRESHOLD ms)"
+        ERROR=1
+    fi
+
+    if [ "$ELAPSED_TIME" -ge "$TIMEOUT" ]; then
+        echo WT took more than "$TIMEOUT"s to shut down. Forcing script to exit...
+        ERROR=1
+    else
+        SHUTDOWN_TIME=$(grep "WiredTiger closed" "$MONGO_LOG" | tail -1 | awk '{print $5}' | grep -Eo '[0-9]{1,}')
+        SHUTDOWN_TIME_THRESHOLD=$(grep "max_shutdown_time" ../"$TEST_CFG" | grep -Eo '[0-9]{1,}')
+        echo WT took "$SHUTDOWN_TIME" ms to shut down
+        if [ "$SHUTDOWN_TIME" -ge "$SHUTDOWN_TIME_THRESHOLD" ]; then
+            echo "Shutdown time took too long: $SHUTDOWN_TIME ms (max allowed: $SHUTDOWN_TIME_THRESHOLD ms)"
+            ERROR=1
+        fi
+    fi
+fi
 
 # Save generated files
 cd ..
