@@ -87,6 +87,12 @@ ERROR=$?
 # Check for start up and shut down time if required.
 ENABLE_CHECK=$(grep "enable_stats_check" ../"$TEST_CFG" | cut -d = -f 2)
 if [ "$ENABLE_CHECK" == "true" ]; then
+
+    if ! pgrep mongod >/dev/null; then
+        echo ERROR - mongod process not found
+        exit 1
+    fi
+
     kill "$(pgrep mongod)"
 
     # If we are using an existing mongod process, we need to start looking from the last
