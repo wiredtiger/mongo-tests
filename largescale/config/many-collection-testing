@@ -10,7 +10,7 @@ run_duration=3600
 update_rate=70
 working_set_docs=50000000
 # Thresholds if configured
-enable_stats_check=false
+enable_stats_check=true
 max_avg_commands_latency=200000
 max_avg_ckpt_duration=40000
 max_avg_ckpt_preparation=20000
