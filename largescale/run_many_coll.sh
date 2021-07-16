@@ -81,10 +81,11 @@ fi
 
 python3 ../many-collection-test.py ../"$TEST_CFG"
 
-rm -rf dbpath/diagnostic.data/
-chmod -R 777 ./*
+# rm -rf dbpath/diagnostic.data/
+# chmod -R 777 ./*
 
 ERROR=$?
+echo ERROR is $ERROR
 
 # Check for start up and shut down time if required.
 ENABLE_CHECK=$(grep "enable_stats_check" ../"$TEST_CFG" | cut -d = -f 2)
