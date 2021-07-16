@@ -143,7 +143,7 @@ cd ..
 BAK_DIR="$OUTPUT"-"$(date +%F-%H:%M:%S)"
 mkdir -p "$BAK_DIR"
 mv results/ "$BAK_DIR"/.
-cp -r "$OUTPUT"/dbpath/diagnostic.data "$BAK_DIR"/.
+# cp -r "$OUTPUT"/dbpath/diagnostic.data "$BAK_DIR"/.
 mkdir -p "$BAK_DIR"/cfg
 cp "$TEST_CFG" "$BAK_DIR"/cfg/.
 
