@@ -67,9 +67,8 @@ rm -rf results
 mkdir results
 
 # Create folder if needed
-mkdir -p "$OUTPUT"
+mkdir -p "$OUTPUT"/dbpath
 cd "$OUTPUT" || exit 1
-mkdir -p dbpath;
 
 # Try to reuse existing mongod process
 if pgrep -x "mongod" > /dev/null; then
@@ -98,12 +97,10 @@ if [ "$ENABLE_CHECK" == "true" ]; then
 
     kill "$(pgrep mongod)"
 
-    # If we are using an existing mongod process, we need to start looking from the last
-    # "SERVER RESTARTED" message in the logs.
-    if [ "$TASK" == "clean-and-populate" ]; then
+    # Look for the last "SERVER RESTARTED" message in the logs.
+    LAST_RESTART=$(grep -n "SERVER RESTARTED" "$MONGO_LOG"  | tail -1 | cut -d : -f 1)
+    if [ -z "$LAST_RESTART" ]; then
         LAST_RESTART=0
-    else
-        LAST_RESTART=$(grep -n "SERVER RESTARTED" "$MONGO_LOG"  | tail -1 | cut -d : -f 1)
     fi
 
     # Timeout before exiting the script if WT takes too long to stop.
@@ -137,6 +134,8 @@ if [ "$ENABLE_CHECK" == "true" ]; then
             ERROR=1
         fi
     fi
+else
+    echo Checks are disabled
 fi
 
 # Save generated files
