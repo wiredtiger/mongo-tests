@@ -82,6 +82,8 @@ fi
 
 python3 ../many-collection-test.py ../"$TEST_CFG"
 
+rm -rf dbpath/diagnostic.data/
+
 ERROR=$?
 
 # Check for start up and shut down time if required.
