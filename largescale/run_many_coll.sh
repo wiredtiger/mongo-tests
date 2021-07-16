@@ -83,6 +83,7 @@ fi
 python3 ../many-collection-test.py ../"$TEST_CFG"
 
 rm -rf dbpath/diagnostic.data/
+chmod -R 777 ./*
 
 ERROR=$?
 
