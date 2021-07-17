@@ -6,7 +6,7 @@ num_thread=128
 oplog=true
 populate=false
 read_rate=30
-run_duration=10
+run_duration=3600
 update_rate=70
 working_set_docs=5000000
 # Thresholds if configured
