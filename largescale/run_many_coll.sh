@@ -89,7 +89,7 @@ echo ERROR is $ERROR
 
 # Check for start up and shut down time if required.
 ENABLE_CHECK=$(grep "enable_stats_check" ../"$TEST_CFG" | cut -d = -f 2)
-if [ "$ENABLE_CHECK" == "true" ]; then
+if [[ $ERROR -eq 0 ]] && [ "$ENABLE_CHECK" == "true" ]; then
 
     if ! pgrep mongod >/dev/null; then
         echo ERROR - mongod process not found
@@ -135,8 +135,6 @@ if [ "$ENABLE_CHECK" == "true" ]; then
             ERROR=1
         fi
     fi
-else
-    echo Checks are disabled
 fi
 
 # Save generated files
