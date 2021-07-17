@@ -619,9 +619,12 @@ def populate_collections(num_collections, docs_per, num_workers):
 # MongoDB setup by initiating a replica set.
 def setup_mongodb():
     print_msg("setup_mongod", 0, "MongoDB Setup: Initializing replica set.")
-    client.admin.command("replSetInitiate")
-    print_msg("setup_mongodb", 0, "Sleeping 5 seconds...")
-    time.sleep(5)
+    try:
+        client.admin.command("replSetInitiate")
+        print_msg("setup_mongodb", 0, "Sleeping 5 seconds...")
+        time.sleep(5)
+    except:
+        print("An exception occurred during replSetInitiate command")
 
 def config_arg_to_bool(config, val):
     if val.lower() == "false":
