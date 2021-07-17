@@ -732,8 +732,8 @@ else:
 
 # Start MongDB.
 client = MongoClient(conn_str)
-# Populate the database.
-if populate and oplog:
+# Set up MongoDB
+if oplog:
     setup_mongodb(client)
 
 # Generation of the CSV file.
