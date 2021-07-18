@@ -26,6 +26,6 @@ min_avg_queries=100
 min_avg_updates=300
 worst_ckpt_duration=45000
 worst_ckpt_preparation=30000
-worst_commands_latency=90000000
+worst_commands_latency=100000000
 worst_reads_latency=200000000
 worst_writes_latency=175000000
