@@ -74,6 +74,7 @@ cd "$OUTPUT" || exit 1
 if pgrep -x "mongod" > /dev/null; then
     echo "-- Using already running mongod --"
 else
+    echo "-- Starting mongod --"
     if ! ../"$MONGO_BIN" -f ../mongod.conf --logpath "$MONGO_LOG"; then
         exit $?
     fi
@@ -81,11 +82,7 @@ fi
 
 python3 ../many-collection-test.py ../"$TEST_CFG"
 
-# rm -rf dbpath/diagnostic.data/
-# chmod -R 777 ./*
-
 ERROR=$?
-echo ERROR is $ERROR
 
 # Check for start up and shut down time if required.
 ENABLE_CHECK=$(grep "enable_stats_check" ../"$TEST_CFG" | cut -d = -f 2)
@@ -142,7 +139,7 @@ cd ..
 BAK_DIR="$OUTPUT"-"$(date +%F-%H:%M:%S)"
 mkdir -p "$BAK_DIR"
 mv results/ "$BAK_DIR"/.
-# cp -r "$OUTPUT"/dbpath/diagnostic.data "$BAK_DIR"/.
+cp -r "$OUTPUT"/dbpath/diagnostic.data "$BAK_DIR"/.
 mkdir -p "$BAK_DIR"/cfg
 cp "$TEST_CFG" "$BAK_DIR"/cfg/.
 
