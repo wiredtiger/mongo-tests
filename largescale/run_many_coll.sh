@@ -67,14 +67,14 @@ rm -rf results
 mkdir results
 
 # Create folder if needed
-mkdir -p "$OUTPUT"
+mkdir -p "$OUTPUT"/dbpath
 cd "$OUTPUT" || exit 1
-mkdir -p dbpath;
 
 # Try to reuse existing mongod process
 if pgrep -x "mongod" > /dev/null; then
     echo "-- Using already running mongod --"
 else
+    echo "-- Starting mongod --"
     if ! ../"$MONGO_BIN" -f ../mongod.conf --logpath "$MONGO_LOG"; then
         exit $?
     fi
@@ -86,7 +86,7 @@ ERROR=$?
 
 # Check for start up and shut down time if required.
 ENABLE_CHECK=$(grep "enable_stats_check" ../"$TEST_CFG" | cut -d = -f 2)
-if [ "$ENABLE_CHECK" == "true" ]; then
+if [[ $ERROR -eq 0 ]] && [ "$ENABLE_CHECK" == "true" ]; then
 
     if ! pgrep mongod >/dev/null; then
         echo ERROR - mongod process not found
@@ -95,17 +95,17 @@ if [ "$ENABLE_CHECK" == "true" ]; then
 
     kill "$(pgrep mongod)"
 
-    # If we are using an existing mongod process, we need to start looking from the last
-    # "SERVER RESTARTED" message in the logs.
-    if [ "$TASK" == "clean-and-populate" ]; then
+    # Look for the last "SERVER RESTARTED" message in the logs.
+    LAST_RESTART=$(grep -n "SERVER RESTARTED" "$MONGO_LOG"  | tail -1 | cut -d : -f 1)
+    if [ -z "$LAST_RESTART" ]; then
         LAST_RESTART=0
-    else
-        LAST_RESTART=$(grep -n "SERVER RESTARTED" "$MONGO_LOG"  | tail -1 | cut -d : -f 1)
     fi
 
     # Timeout before exiting the script if WT takes too long to stop.
     TIMEOUT=3600
     ELAPSED_TIME=0
+
+    # Detect when WT has closed.
     echo Waiting for mongod to stop...
     until [ "$ELAPSED_TIME" -ge "$TIMEOUT" ] || tail -n +"$LAST_RESTART" "$MONGO_LOG" | grep "WiredTiger closed" > /dev/null;
     do
@@ -114,6 +114,7 @@ if [ "$ENABLE_CHECK" == "true" ]; then
         echo time elapsed... "$ELAPSED_TIME"s
     done
 
+    # Find the startup time in the logs.
     STARTUP_TIME=$(grep "WiredTiger opened" "$MONGO_LOG" | tail -1 | awk '{print $5}' | grep -Eo '[0-9]{1,}')
     STARTUP_TIME_THRESHOLD=$(grep "max_startup_time" ../"$TEST_CFG" | grep -Eo '[0-9]{1,}')
     echo WT took "$STARTUP_TIME" ms to start up
@@ -122,6 +123,7 @@ if [ "$ENABLE_CHECK" == "true" ]; then
         ERROR=1
     fi
 
+    # Find the shutdown time in the logs.
     if [ "$ELAPSED_TIME" -ge "$TIMEOUT" ]; then
         echo WT took more than "$TIMEOUT"s to shut down. Forcing script to exit...
         ERROR=1
