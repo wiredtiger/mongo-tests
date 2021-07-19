@@ -617,7 +617,7 @@ def populate_collections(num_collections, docs_per, num_workers):
     print_msg("populate_collections", 0, "Done. %d workers took %.2f seconds. Inserts per sec: %d." % (num_workers, time_secs, int(working_set_docs/time_secs)))
 
 # MongoDB setup by initiating a replica set.
-def setup_mongodb(config):
+def setup_mongodb():
     print_msg("setup_mongod", 0, "MongoDB Setup: Initializing replica set.")
     client.admin.command("replSetInitiate")
     print_msg("setup_mongodb", 0, "Sleeping 5 seconds...")
@@ -732,9 +732,9 @@ else:
 
 # Start MongDB.
 client = MongoClient(conn_str)
-# Populate the database.
-if populate and oplog:
-    setup_mongodb(client)
+# Set up MongoDB.
+if oplog:
+    setup_mongodb()
 
 # Generation of the CSV file.
 fhandle = open(output_filename, 'a')
