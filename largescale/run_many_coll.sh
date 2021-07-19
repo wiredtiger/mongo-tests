@@ -105,7 +105,7 @@ if [[ $ERROR -eq 0 ]] && [ "$ENABLE_CHECK" == "true" ]; then
     TIMEOUT=3600
     ELAPSED_TIME=0
 
-    # Detech when WT has closed.
+    # Detect when WT has closed.
     echo Waiting for mongod to stop...
     until [ "$ELAPSED_TIME" -ge "$TIMEOUT" ] || tail -n +"$LAST_RESTART" "$MONGO_LOG" | grep "WiredTiger closed" > /dev/null;
     do
