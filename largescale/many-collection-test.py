@@ -81,10 +81,13 @@ def launch_poc_driver(name, conf):
                " -u " + str(update_rate) +
                " -k " + str(read_rate) +
                " -q " + str(limit_throughput) +
-               " -z " + str(docs_per) +
+               # Disabling the zipfian till we figure out another means
+               # to distribute load. Using zipfian is causing POCDriver
+               # to switch to older behavior - and not distribute workload
+               # properly between reads/writes/inserts.
+               # " -z " + str(docs_per) +
                " -d " + str(run_duration) +
                " -y " + str(num_collections) +
-               " --collectionKeyMax " + str(docs_per) +
                " -o " + str(output_csv) +
                " -t " + str(num_threads) +
                " -b " + str(batch_size))
@@ -102,7 +105,7 @@ def launch_poc_driver(name, conf):
         time.sleep(1)
 
     if java_proc.poll() == 0:
-        print_msg(name, 2, "Java POC load generator exited successfully")
+        print_msg(name, 0, "Java POC load generator exited successfully")
     else:
         print_msg(name, 0, "Java POC load generator failed with return code: %d" % java_proc.poll())
         exit(123)
@@ -637,7 +640,7 @@ def load_from_config(filename):
     # Workload parameters.
     global batch_size, collname, conn_str, dbname, enable_stats_check, insert_rate, \
     limit_throughput, num_collections, num_threads, oplog, output_csv, output_filename, populate, \
-    read_rate, run_duration, verbose_level, working_set_docs
+    read_rate, run_duration, update_rate, verbose_level, working_set_docs
     # Performance thresholds.
     global max_avg_commands_latency, max_avg_ckpt_duration, max_avg_ckpt_preparation, \
     max_avg_reads_latency, max_avg_writes_latency, max_stalled_inserts, max_stalled_queries, \
