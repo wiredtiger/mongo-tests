@@ -445,6 +445,8 @@ def launch_server_status_processor(name, conf):
         status_q.task_done()
 
     result["Run Duration"] = count
+    result["Number of collections"] = num_collections
+    result["Working set document count"] = working_set_docs
     result["Average inserts"] = total_inserts/count
     result["Average queries"] = total_query/count
     result["Average updates"] = total_update/count
