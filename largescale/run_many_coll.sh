@@ -3,6 +3,8 @@
 # A script to prepare test environment and execute many collections testing.
 #
 
+set -eux
+
 usage () {
     cat << EOF
 Usage: $0 mongodb_bin mongo_logs test_cfg output [task]
