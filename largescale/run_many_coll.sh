@@ -31,10 +31,10 @@ TASK=$5
 if [ "$TASK" == "clean-and-populate" ]; then
     echo "-- Cleaning and populating --"
 
-    killall -9 mongod || echo "No mongod running."
+    killall -9 mongod || echo "No previous running mongod to kill."
     # Sleep to give mongodb time to close completely
     sleep 2
-    rm -rf "$OUTPUT" || echo "Output directory already clean."
+    rm -rf "$OUTPUT"
 
     # Enabling populating phase if missing in the test configuration
     if grep -qi "populate=false" "$TEST_CFG"; then
@@ -65,7 +65,7 @@ else
 fi
 
 # Clear the output of a previous run
-rm -rf results || echo "No previous results to clean"
+rm -rf results
 mkdir results
 
 # Create folder if needed
