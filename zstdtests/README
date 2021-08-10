@@ -1,0 +1,30 @@
+These programs are to test Snappy as well as ZStandard.
+In ZStandard various different API sets could be tested. For eg:- simple API,
+Advanced API, Block compression API, Streaming compression API etc.,
+
+1.snappy.c : program to test snappy compression.
+#gcc -o snappy_app snappy.c -lsnappy -lpthread
+
+2.zstd_simple.c : program to test zstandard simple API usage.
+#gcc -o zstd_simple_app zstd_simple.c -lpthread ./zstd-1.5.0/lib/libzstd.so.1.5.0
+
+3.zstd_context_threads.c : program to test zstandard reusable context API usage.
+#gcc -o zstd_context_threads_app zstd_context_threads.c -lpthread ./zstd-1.5.0/lib/libzstd.so.1.5.0
+
+4.zstd_context_workers.c : program to test zstandard reusable context API
+usage with zstandard workers configuration.
+#gcc -o zstd_context_workers_app zstd_context_workers.c -lpthread ./zstd-1.5.0/lib/libzstd.so.1.5.0
+
+5.zstd_stream.c : program to test zstandard streaming compression API usage.
+#gcc -o zstd_stream_app zstd_stream.c -lpthread ./zstd-1.5.0/lib/libzstd.so.1.5.0
+
+6.zstd_context_fast.c : program to test zstandard involving reusable context with ZSTD_fast setting.
+#gcc -o zstd_context_fast_app zstd_context_fast.c -lpthread ./zstd-1.5.0/lib/libzstd.so.1.5.0
+
+7.zstd_context_dict.c : program to test zstandard involving reusable context with an empty dictionary.
+#gcc -o zstd_context_dict_app zstd_context_dict.c -lpthread ./zstd-1.5.0/lib/libzstd.so.1.5.0
+
+8.zstd_dict_fast.c : program to test zstandard involving reusable context with
+an empty dictionary and ZSTD_fast setting.
+#gcc -o zstd_dict_fast_app zstd_dict_fast.c -lpthread ./zstd-1.5.0/lib/libzstd.so.1.5.0
+
