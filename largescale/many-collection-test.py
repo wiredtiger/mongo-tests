@@ -271,15 +271,7 @@ def launch_server_status_processor(name, conf):
 
         # WiredTiger statistics where needed are reset on collection internally,
         # hence difference from the previous is not needed.
-        "checkpoint most recent duration for gathering all handles (usecs)" : [],
-        "checkpoint most recent duration for gathering applied handles (usecs)" : [],
-        "checkpoint most recent duration for gathering skipped handles (usecs)" : [],
-        "checkpoint most recent handles applied" : [],
-        "checkpoint most recent handles skipped" : [],
-        "checkpoint most recent handles walked" : [],
         "checkpoint most recent time (msecs)" : [],
-        "checkpoint prepare most recent time (msecs)" : [],
-        "checkpoint prepare running" : [],
         "checkpoint running" : [],
         "dhandles currently active" : [],
     }
@@ -290,8 +282,8 @@ def launch_server_status_processor(name, conf):
     prev = {}
     start = time.time()
 
-    print_msg("ServerStat", 0, "      | =====Throughput===== | =======Avg latency====== | ==== ======last ckpt duration====== =========================handles=======================")
-    print_msg("ServerStat", 0, " Secs | Inserts Query Update |   reads  writes commands | ckpt last-ckpt(ms) last-prepare(ms)  active  walked(num/ms) applied(num/ms) skipped(num/ms)")
+    print_msg("ServerStat", 0, "      | =====Throughput===== | =======Avg latency====== | ==== ======last ckpt duration======")
+    print_msg("ServerStat", 0, " Secs | Inserts Query Update |   reads  writes commands | ckpt last-ckpt(ms) ")
 
     while now - start < duration:
         res = status_q.get()
@@ -365,28 +357,16 @@ def launch_server_status_processor(name, conf):
                 (cur["writes-latency"] - prev["writes-latency"]) / (cur["writes-ops"] - prev["writes-ops"]))
 
         # WiredTiger statistics don't need to be subtracted from the previous.
-        extracted_test_data["checkpoint most recent duration for gathering all handles (usecs)"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent duration for gathering all handles (usecs)"])
-        extracted_test_data["checkpoint most recent duration for gathering applied handles (usecs)"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent duration for gathering applied handles (usecs)"])
-        extracted_test_data["checkpoint most recent duration for gathering skipped handles (usecs)"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent duration for gathering skipped handles (usecs)"])
-        extracted_test_data["checkpoint most recent handles applied"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent handles applied"])
-        extracted_test_data["checkpoint most recent handles skipped"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent handles skipped"])
-        extracted_test_data["checkpoint most recent handles walked"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent handles walked"])
         extracted_test_data["checkpoint most recent time (msecs)"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent time (msecs)"])
-        extracted_test_data["checkpoint prepare most recent time (msecs)"].append(res["wiredTiger"]["transaction"]["transaction checkpoint prepare most recent time (msecs)"])
-        extracted_test_data["checkpoint prepare running"].append(res["wiredTiger"]["transaction"]["transaction checkpoint prepare currently running"])
         extracted_test_data["checkpoint running"].append(res["wiredTiger"]["transaction"]["transaction checkpoint currently running"])
         extracted_test_data["dhandles currently active"].append(res["wiredTiger"]["data-handle"]["connection data handles currently active"])
 
         # Print data every 5 data points (should equate to 5 seconds).
         if count % 5 == 0:
-            print_msg("ServerStat", 0, "%5d | %7d %5d %6d | %7d %7d %8d | %4d %13d %16d %7d %7d/%7d %7d/%7d %7d/%7d" %
+            print_msg("ServerStat", 0, "%5d | %7d %5d %6d | %7d %7d %8d | %4d %13d" %
                 (count, extracted_test_data["insert"][count], extracted_test_data["query"][count], extracted_test_data["update"][count],
                 extracted_test_data["reads-latency"][count], extracted_test_data["writes-latency"][count], extracted_test_data["commands-latency"][count],
-                extracted_test_data["checkpoint running"][count], extracted_test_data["checkpoint most recent time (msecs)"][count],
-                extracted_test_data["checkpoint prepare most recent time (msecs)"][count], extracted_test_data["dhandles currently active"][count],
-                extracted_test_data["checkpoint most recent handles walked"][count], extracted_test_data["checkpoint most recent duration for gathering all handles (usecs)"][count]/1000,
-                extracted_test_data["checkpoint most recent handles applied"][count], extracted_test_data["checkpoint most recent duration for gathering applied handles (usecs)"][count]/1000,
-                extracted_test_data["checkpoint most recent handles skipped"][count], extracted_test_data["checkpoint most recent duration for gathering skipped handles (usecs)"][count]/1000
+                extracted_test_data["checkpoint running"][count], extracted_test_data["checkpoint most recent time (msecs)"][count]
             ))
 
         # Check for stalls
@@ -423,10 +403,6 @@ def launch_server_status_processor(name, conf):
             heapq.heappush(ckpt, extracted_test_data["checkpoint most recent time (msecs)"][count])
         else:
             heapq.heappushpop(ckpt, extracted_test_data["checkpoint most recent time (msecs)"][count])
-        if len(ckpt_prepare) < 5:
-            heapq.heappush(ckpt_prepare, extracted_test_data["checkpoint prepare most recent time (msecs)"][count])
-        else:
-            heapq.heappushpop(ckpt_prepare, extracted_test_data["checkpoint prepare most recent time (msecs)"][count])
 
         # Update the total stats.
         total_inserts += extracted_test_data["insert"][count]
@@ -436,7 +412,6 @@ def launch_server_status_processor(name, conf):
         total_writes_latency += extracted_test_data["writes-latency"][count]
         total_commands_latency += extracted_test_data["commands-latency"][count]
         total_ckpt += extracted_test_data["checkpoint most recent time (msecs)"][count]
-        total_ckpt_prepare += extracted_test_data["checkpoint prepare most recent time (msecs)"][count]
 
         count +=1
         prev = cur
@@ -454,11 +429,10 @@ def launch_server_status_processor(name, conf):
     result["Average write latency"] = total_writes_latency/count
     result["Average command latency"] = total_commands_latency/count
     result["Average checkpoint duration"] = total_ckpt/count
-    result["Average checkpoint-prepare duration"] = total_ckpt_prepare/count
     print_msg("ServerStat", 0, "Total | Averages over whole run")
-    print_msg("ServerStat", 0, "%5d | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
+    print_msg("ServerStat", 0, "%5d | %7d %5d %6d | %7d %7d %8d | ---- %13d" %
         (count, result["Average inserts"], result["Average queries"], result["Average updates"], result["Average read latency"], result["Average write latency"],
-        result["Average command latency"], result["Average checkpoint duration"], result["Average checkpoint-prepare duration"]
+        result["Average command latency"], result["Average checkpoint duration"]
     ))
 
     worst_ckpt_duration_value = 0
@@ -478,25 +452,23 @@ def launch_server_status_processor(name, conf):
             slow_writes_latency = result["Worst per-sec writes latency " + str(num_samples - index)] = heapq.heappop(writes_latency)
             slow_commands_latency = result["Worst per-sec commands latency " + str(num_samples - index)] = heapq.heappop(commands_latency)
             slow_ckpt_duration = result["Worst checkpoint duration " + str(num_samples - index)] = heapq.heappop(ckpt)
-            slow_ckpt_prepare_duration = result["Worst checkpoint prepare duration " + str(num_samples - index)] = heapq.heappop(ckpt_prepare)
-            print_msg("ServerStat", 0, "----- | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
+            print_msg("ServerStat", 0, "----- | %7d %5d %6d | %7d %7d %8d | ---- %13d" %
                 (slow_ins_rate, slow_query_rate, slow_update_rate,
                  slow_reads_latency, slow_writes_latency, slow_commands_latency,
-                 slow_ckpt_duration, slow_ckpt_prepare_duration))
+                 slow_ckpt_duration))
         else:
             # Save the values for future check
             worst_ins_rate = result["Worst per-sec insert throughput"] = -1 * heapq.heappop(inserts)
             worst_query_rate = result["Worst per-sec query throughput"] = -1 * heapq.heappop(query)
             worst_update_rate = result["Worst per-sec update throughput"] = -1 * heapq.heappop(update)
             worst_ckpt_duration_value = result["Worst checkpoint duration"] = heapq.heappop(ckpt)
-            worst_ckpt_preparation_value = result["Worst checkpoint prepare duration"] = heapq.heappop(ckpt_prepare)
             worst_commands_latency_value = result["Worst per-sec commands latency"] = heapq.heappop(commands_latency)
             worst_reads_latency_value = result["Worst per-sec reads latency"] = heapq.heappop(reads_latency)
             worst_writes_latency_value = result["Worst per-sec writes latency"] = heapq.heappop(writes_latency)
-            print_msg("ServerStat", 0, "----- | %7d %5d %6d | %7d %7d %8d | ---- %13d %16d" %
+            print_msg("ServerStat", 0, "----- | %7d %5d %6d | %7d %7d %8d | ---- %13d" %
                 (worst_ins_rate, worst_query_rate, worst_update_rate,
                 worst_reads_latency_value, worst_writes_latency_value, worst_commands_latency_value,
-                worst_ckpt_duration_value, worst_ckpt_preparation_value))
+                worst_ckpt_duration_value))
 
     print_msg("Stalls over whole run", 0, "")
     for stat in stalled_counters:
@@ -539,15 +511,9 @@ def launch_server_status_processor(name, conf):
         if result["Average checkpoint duration"] > max_avg_ckpt_duration:
             print("Average checkpoint duration is too high: %d ms. Max allowed: %d ms" % (result["Average checkpoint duration"], max_avg_ckpt_duration))
             success = False
-        if result["Average checkpoint-prepare duration"] > max_avg_ckpt_preparation:
-            print("Average checkpoint preparation is too high: %d ms. Max allowed: %d ms" % (result["Average checkpoint-prepare duration"], max_avg_ckpt_preparation))
-            success = False
 
         if worst_ckpt_duration_value > worst_ckpt_duration:
             print("Checkpoint duration has exceeded the limit: %d ms. Max allowed: %d ms" % (worst_ckpt_duration_value, worst_ckpt_duration))
-            success = False
-        if worst_ckpt_preparation_value > worst_ckpt_preparation:
-            print("Checkpoint preparation latency has exceeded the limit: %d ms. Max allowed: %d ms" % (worst_ckpt_preparation_value, worst_ckpt_preparation))
             success = False
         if worst_commands_latency_value > worst_commands_latency:
             print("Commands latency has exceeded the limit: %d. Max allowed: %d" % (worst_commands_latency_value, worst_commands_latency))
