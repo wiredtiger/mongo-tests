@@ -22,7 +22,7 @@ import subprocess
 import time
 from bson.binary import Binary
 from multiprocessing import Pool
-from pymongo import MongoClient
+from pymongo import InsertOne, MongoClient
 import json
 
 PROGNAME = os.path.basename(sys.argv[0])
@@ -615,13 +615,13 @@ def populate_collections_worker(pop_worker_args):
     for x in range(begin_coll, end_coll):
         ns = collname + str(x)
         bulkSize = 1000
-        bulk = client[dbname][ns].initialize_unordered_bulk_op()
+        bulk_inserts = []
         for y in range(int(docs_per)):
             if y % bulkSize == 0 and y > 0:
-                bulk.execute()
-                bulk = client[dbname][ns].initialize_unordered_bulk_op()
-            bulk.insert(gen_random_doc(y))
-        bulk.execute()
+                client[dbname][ns].bulk_write(bulk_inserts, ordered=False)
+                bulk_inserts = []
+            bulk_inserts.append(InsertOne(gen_random_doc(y)))
+        client[dbname][ns].bulk_write(bulk_inserts, ordered=False)
     print_msg("populate_worker", 2, "Populate worker %d finished." % worker_num)
 
     # Close the connection to server.
