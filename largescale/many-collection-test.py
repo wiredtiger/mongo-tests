@@ -655,8 +655,10 @@ def populate_collections(num_collections, docs_per, num_workers):
 def setup_mongodb():
     print_msg("setup_mongod", 0, "MongoDB Setup: Initializing replica set.")
     client.admin.command("replSetInitiate")
-    print_msg("setup_mongodb", 0, "Sleeping 5 seconds...")
-    time.sleep(5)
+    # We give a large sleep value to make sure the replica set has time to be successfully
+    # initialized.
+    print_msg("setup_mongodb", 0, "Sleeping 30 seconds...")
+    time.sleep(30)
 
 def config_arg_to_bool(config, val):
     if val.lower() == "false":
