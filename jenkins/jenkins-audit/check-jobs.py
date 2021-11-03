@@ -46,6 +46,7 @@ archive_stats_skips = [
 mongodb_branch_skips = [
     "3.0",
     "3.2",
+    "5.1",
     "master",
 ]
 
