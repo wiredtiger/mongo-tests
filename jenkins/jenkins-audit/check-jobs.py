@@ -48,6 +48,7 @@ mongodb_branch_skips = [
     "3.2",
     "5.1",
     "5.2",
+    "5.3",
     "master",
 ]
 
