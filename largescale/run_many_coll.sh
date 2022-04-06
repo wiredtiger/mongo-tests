@@ -12,7 +12,7 @@ Arguments:
     mongodb_bin # MongoDB binary
     mongo_logs  # MongoDB logs
     test_cfg    # Test configuration
-    output      # Output directory, the current date will be appended to the name
+    output      # Output directory
     task        # "clean-and-populate" to clean and populate
 EOF
 }
@@ -142,12 +142,14 @@ fi
 
 # Save generated files
 cd ..
-BAK_DIR="$OUTPUT"-"$(date +%F-%H:%M:%S)"
+BAK_DIR="$OUTPUT"-artifacts
 mkdir -p "$BAK_DIR"
 mv results/ "$BAK_DIR"/.
 cp -r "$OUTPUT"/dbpath/diagnostic.data "$BAK_DIR"/.
-mkdir -p "$BAK_DIR"/cfg
-cp "$TEST_CFG" "$BAK_DIR"/cfg/.
+mkdir -p "$BAK_DIR"/config
+cp "$TEST_CFG" "$BAK_DIR"/config/.
+mkdir -p "$BAK_DIR"/logs
+cp "$OUTPUT"/"$MONGO_LOG" "$BAK_DIR"/logs/.
 
 # Clean temporary files
 if [ -n "$TMP_FILE" ]; then
