@@ -1,9 +1,3 @@
-#!/bin/bash
-
-source python3-venv/bin/activate
-
-python3 buildscripts/resmoke.py run --suites=no_passthrough --dbpath=~/data/db/ --log=file jstests/noPassthrough/repro.js
-ubuntu@ip-10-122-7-218:~/mongo$ cat jstests/noPassthrough/repro.js
 /**
  * HELP-38923.
  */
