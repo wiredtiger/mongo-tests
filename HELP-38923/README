@@ -1,0 +1,3 @@
+Run via resmoke:
+
+python3 buildscripts/resmoke.py run --suites=no_passthrough --dbpath=~/data/db/ --log=file jstests/noPassthrough/repro.js
