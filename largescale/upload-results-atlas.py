@@ -39,7 +39,7 @@ if arg_count != 5 and arg_count != 7:
     exit()
 
 argv_it = iter(sys.argv)
-# ignore the first argv
+# Ignore the first argv.
 next(argv_it)
 if arg_count == 5:
     USER = os.getenv('atlas_wt_perf_test_user')
