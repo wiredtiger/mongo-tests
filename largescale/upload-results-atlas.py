@@ -14,7 +14,7 @@ import datetime
 PROGNAME = os.path.basename(sys.argv[0])
 USAGE = """
 Usage:
-  {progname} <user-name> <password> <namespace> <collection> <branch> <results-file-to-upload>
+  {progname} [<user-name> <password>] <namespace> <collection> <branch> <results-file-to-upload>
 """.format(progname=PROGNAME)
 
 ATLAS_SERVER = "perfvisual.j1trn.mongodb.net"
@@ -33,16 +33,24 @@ def upload_results_atlas(coll, branch, filename):
             coll.insert_one(upload_doc)
 
 # Main
-if len(sys.argv) != 7:
+arg_count = len(sys.argv)
+if arg_count != 5 and arg_count != 7:
     print(USAGE)
     exit()
 
-USER = sys.argv[1]
-PASSWORD = sys.argv[2]
-NS = sys.argv[3]
-COLL = sys.argv[4]
-BRANCH = sys.argv[5]
-FILE_UPLOAD = sys.argv[6]
+argv_it = iter(sys.argv)
+# Ignore the first argv.
+next(argv_it)
+if arg_count == 5:
+    USER = os.getenv('atlas_wt_perf_test_user')
+    PASSWORD = os.getenv('atlas_wt_perf_pass')
+else:
+    USER = next(argv_it)
+    PASSWORD = next(argv_it)
+NS = next(argv_it)
+COLL = next(argv_it)
+BRANCH = next(argv_it)
+FILE_UPLOAD = next(argv_it)
 
 # Create connection string
 client_str = "mongodb+srv://" + USER + ":" + PASSWORD + "@" + ATLAS_SERVER + \
