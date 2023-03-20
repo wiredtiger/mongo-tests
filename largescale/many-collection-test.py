@@ -49,7 +49,6 @@ num_collections = 1
 num_threads = 32
 oplog = True
 output_csv = "../results/out.csv"
-output_filename = "../results/results.json"
 populate = True
 read_rate = 0
 run_duration = 3600
@@ -65,12 +64,21 @@ def print_msg(module_name, level, msg):
     if level <= verbose_level:
         print("%s : %s" % (module_name, msg))
 
-# Dump json results to the given file
+# Dump JSON result to two files.
 def write_json_output(result):
-    fhandle = open(output_filename, 'a')
-    fhandle.write(json.dumps(result))
-    fhandle.write("\n")
-    fhandle.close()
+    test_name = "many-collection-test"
+    # Create a list of metrics from the result dictionary
+    metrics = [{"name": metric_name, "value": metric_value} for metric_name, metric_value in result.items()]
+
+    # Write Atlas output to a JSON file
+    atlas_output = {"Test Name": test_name, "metrics": metrics}
+    with open(f"../results/atlas_out_{test_name}.json", 'w') as outfile:
+        json.dump(atlas_output, outfile, indent=4, sort_keys=True)
+
+    # Write Evergreen output to a JSON file
+    evg_output = [{"info": {"test_name": test_name}, "metrics": metrics}]
+    with open(f"../results/evergreen_out_{test_name}.json", 'w') as outfile:
+        json.dump(evg_output, outfile, indent=4, sort_keys=True)
 
 # Execution of the POCDriver.
 def launch_poc_driver(name, conf):
@@ -673,7 +681,7 @@ def config_arg_to_bool(config, val):
 def load_from_config(filename):
     # Workload parameters.
     global batch_size, collname, conn_str, dbname, enable_stats_check, insert_rate, \
-    limit_throughput, num_collections, num_threads, oplog, output_csv, output_filename, populate, \
+    limit_throughput, num_collections, num_threads, oplog, output_csv, populate, \
     read_rate, run_duration, update_rate, verbose_level, working_set_docs
     # Performance thresholds.
     global max_avg_commands_latency, max_avg_ckpt_duration, max_avg_ckpt_preparation, \
@@ -732,8 +740,6 @@ def load_from_config(filename):
                 oplog = config_arg_to_bool(arr[0], val)
             if arr[0] == "output_csv":
                 output_csv = val
-            if arr[0] == "output_filename":
-                output_filename = val
             if arr[0] == "populate":
                 populate = config_arg_to_bool(arr[0], val)
             if arr[0] == "read_rate":
