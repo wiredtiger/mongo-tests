@@ -73,11 +73,14 @@ def write_json_output(result):
     # Write Atlas output to a JSON file
     atlas_output = {"Test Name": test_name, "metrics": metrics}
     with open(f"../results/atlas_out_{test_name}.json", 'w+') as outfile:
+        print(os.path.abspath('../results'))
+        print(json.dumps(atlas_output, indent=4))
         json.dump(atlas_output, outfile, indent=4, sort_keys=True)
 
     # Write Evergreen output to a JSON file
     evg_output = [{"info": {"test_name": test_name}, "metrics": metrics}]
     with open(f"../results/evergreen_out_{test_name}.json", 'w+') as outfile:
+        print(json.dumps(evg_output, indent=4))
         json.dump(evg_output, outfile, indent=4, sort_keys=True)
 
 # Execution of the POCDriver.
