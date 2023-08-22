@@ -365,16 +365,16 @@ def launch_server_status_processor(name, conf):
                 (cur["writes-latency"] - prev["writes-latency"]) / (cur["writes-ops"] - prev["writes-ops"]))
 
         # WiredTiger statistics don't need to be subtracted from the previous.
-        extracted_test_data["checkpoint most recent duration for gathering all handles (usecs)"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent duration for gathering all handles (usecs)"])
-        extracted_test_data["checkpoint most recent duration for gathering applied handles (usecs)"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent duration for gathering applied handles (usecs)"])
-        extracted_test_data["checkpoint most recent duration for gathering skipped handles (usecs)"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent duration for gathering skipped handles (usecs)"])
-        extracted_test_data["checkpoint most recent handles applied"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent handles applied"])
-        extracted_test_data["checkpoint most recent handles skipped"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent handles skipped"])
-        extracted_test_data["checkpoint most recent handles walked"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent handles walked"])
-        extracted_test_data["checkpoint most recent time (msecs)"].append(res["wiredTiger"]["transaction"]["transaction checkpoint most recent time (msecs)"])
-        extracted_test_data["checkpoint prepare most recent time (msecs)"].append(res["wiredTiger"]["transaction"]["transaction checkpoint prepare most recent time (msecs)"])
-        extracted_test_data["checkpoint prepare running"].append(res["wiredTiger"]["transaction"]["transaction checkpoint prepare currently running"])
-        extracted_test_data["checkpoint running"].append(res["wiredTiger"]["transaction"]["transaction checkpoint currently running"])
+        extracted_test_data["checkpoint most recent duration for gathering all handles (usecs)"].append(res["wiredTiger"]["checkpoint"]["most recent duration for gathering all handles (usecs)"])
+        extracted_test_data["checkpoint most recent duration for gathering applied handles (usecs)"].append(res["wiredTiger"]["checkpoint"]["most recent duration for gathering applied handles (usecs)"])
+        extracted_test_data["checkpoint most recent duration for gathering skipped handles (usecs)"].append(res["wiredTiger"]["checkpoint"]["most recent duration for gathering skipped handles (usecs)"])
+        extracted_test_data["checkpoint most recent handles applied"].append(res["wiredTiger"]["checkpoint"]["most recent handles applied"])
+        extracted_test_data["checkpoint most recent handles skipped"].append(res["wiredTiger"]["checkpoint"]["most recent handles skipped"])
+        extracted_test_data["checkpoint most recent handles walked"].append(res["wiredTiger"]["checkpoint"]["most recent handles walked"])
+        extracted_test_data["checkpoint most recent time (msecs)"].append(res["wiredTiger"]["checkpoint"]["most recent time (msecs)"])
+        extracted_test_data["checkpoint prepare most recent time (msecs)"].append(res["wiredTiger"]["checkpoint"]["prepare most recent time (msecs)"])
+        extracted_test_data["checkpoint prepare running"].append(res["wiredTiger"]["checkpoint"]["prepare currently running"])
+        extracted_test_data["checkpoint running"].append(res["wiredTiger"]["checkpoint"]["progress state"])
         extracted_test_data["dhandles currently active"].append(res["wiredTiger"]["data-handle"]["connection data handles currently active"])
 
         # Print data every 5 data points (should equate to 5 seconds).
