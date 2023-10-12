@@ -47,6 +47,14 @@ def loads(data):
     return decode_document(data, 0)[1]
 
 
+def loads_strict(data):
+    return decode_document_strict(data, 0)[1]
+
+
+def loads_walk(data, callback = lambda x: None):
+    return decode_document_walk(data, 0, callback)
+
+
 def patch_socket():
     """
         Patches the Python socket class such that sockets can send and receive BSON

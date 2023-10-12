@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+
+import sys
+import bson_strict
+from pprint import pp,pprint
+
+def callback(obj):
+  pp(obj)
+  print()
+
+for arg in sys.argv[1:]:
+  with open(arg, "rb") as file:
+    data = file.read()
+  if len(sys.argv) > 2: print(f"--- File {arg}:")
+  pp(bson_strict.loads_walk(data, callback))
+

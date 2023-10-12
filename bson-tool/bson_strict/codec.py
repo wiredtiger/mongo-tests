@@ -13,7 +13,7 @@ from abc import ABCMeta, abstractmethod
 from uuid import UUID
 from decimal import Decimal
 
-from bson.types import UInt64, Int64, Int32
+from bson_strict.types import *
 
 try:
     from io import BytesIO as StringIO
@@ -194,7 +194,7 @@ def encode_value(name, value, buf, traversal_stack,
             buf.write(encode_int64_element(name, value))
         elif value > 0x7FFFFFFFFFFFFFFF:
             if value > 0xFFFFFFFFFFFFFFFF:
-                raise Exception("BSON format supports only int value < %s" % 0xFFFFFFFFFFFFFFFF) 
+                raise Exception("BSON format supports only int value < %s" % 0xFFFFFFFFFFFFFFFF)
             buf.write(encode_uint64_element(name, value))
         else:
             buf.write(encode_int32_element(name, value))
@@ -212,6 +212,8 @@ def encode_value(name, value, buf, traversal_stack,
         buf.write(encode_binary_element(name, value))
     elif isinstance(value, UUID):
         buf.write(encode_binary_element(name, value.bytes, binary_subtype=4))
+    elif isinstance(value, Binary):
+        buf.write(encode_binary_element(name, value.bytes, value.subtype))
     elif isinstance(value, datetime):
         buf.write(encode_utc_datetime_element(name, value))
     elif value is None:
@@ -356,6 +358,238 @@ def decode_document(data, base, as_array=False):
     if "$$__CLASS_NAME__$$" in retval:
         retval = decode_object(retval)
     return end_point, retval
+
+
+def decode_binary_subtype_strict(value, binary_subtype):
+    if binary_subtype in [0x03, 0x04]:  # legacy UUID, UUID
+        return BinaryUUID(value, binary_subtype)
+    return Binary(value, binary_subtype)
+
+
+def decode_document_strict(data, base, as_array=False):
+    # Create all the struct formats we might use.
+    double_struct = struct.Struct("<d")
+    int_struct = struct.Struct("<i")
+    char_struct = struct.Struct("<b")
+    long_struct = struct.Struct("<q")
+    uint64_struct = struct.Struct("<Q")
+    int_char_struct = struct.Struct("<ib")
+
+    length = struct.unpack("<i", data[base:base + 4])[0]
+    end_point = base + length
+    if data[end_point - 1] not in ('\0', 0):
+        raise ValueError('missing null-terminator in document')
+    base += 4
+    retval = [] if as_array else {}
+    decode_name = not as_array
+
+    while base < end_point - 1:
+
+        element_type = char_struct.unpack(data[base:base + 1])[0]
+
+        if PY3:
+            ll = data.index(0, base + 1) + 1
+        else:
+            ll = data.index("\x00", base + 1) + 1
+        if decode_name:
+            name = data[base + 1:ll - 1]
+            try:
+                name = name.decode("utf-8")
+            except UnicodeDecodeError:
+                pass
+        else:
+            name = None
+        base = ll
+
+        if element_type == 0x01:  # double
+            value = float(double_struct.unpack(data[base: base + 8])[0])
+            base += 8
+        elif element_type == 0x02:  # string
+            length = int_struct.unpack(data[base:base + 4])[0]
+            value = data[base + 4: base + 4 + length - 1]
+            value = value.decode("utf-8")
+            base += 4 + length
+        elif element_type == 0x03:  # document
+            base, value = decode_document_strict(data, base)
+        elif element_type == 0x04:  # array
+            base, value = decode_document_strict(data, base, as_array=True)
+        elif element_type == 0x05:  # binary
+            length, binary_subtype = int_char_struct.unpack(
+                data[base:base + 5])
+            value = data[base + 5:base + 5 + length]
+            value = decode_binary_subtype_strict(value, binary_subtype)
+            base += 5 + length
+        elif element_type == 0x07:  # object_id
+            value = OID(data[base:base + 12])
+            base += 12
+        elif element_type == 0x08:  # boolean
+            value = bool(char_struct.unpack(data[base:base + 1])[0])
+            base += 1
+        elif element_type == 0x09:  # UTCdatetime
+            value = datetime.fromtimestamp(
+                long_struct.unpack(data[base:base + 8])[0] / 1000.0, utc)
+            base += 8
+        elif element_type == 0x0A:  # none
+            value = None
+        elif element_type == 0x10:  # int32
+            value = Int32(int_struct.unpack(data[base:base + 4])[0])
+            base += 4
+        elif element_type == 0x11:  # uint64
+            value = UInt64(uint64_struct.unpack(data[base:base + 8])[0])
+            base += 8
+        elif element_type == 0x12:  # int64
+            value = Int64(long_struct.unpack(data[base:base + 8])[0])
+            base += 8
+
+        if as_array:
+            retval.append(value)
+        else:
+            retval[name] = value
+    if "$$__CLASS_NAME__$$" in retval:
+        retval = decode_object(retval)
+    return end_point, retval
+
+
+def decode_document_walk(data, base, callback = lambda x: None, path="", as_array=False):
+    from collections import OrderedDict
+
+    # Create all the struct formats we might use.
+    double_struct = struct.Struct("<d")
+    int_struct = struct.Struct("<i")
+    char_struct = struct.Struct("<b")
+    long_struct = struct.Struct("<q")
+    uint64_struct = struct.Struct("<Q")
+    int_char_struct = struct.Struct("<ib")
+
+    base_document = base
+    length = struct.unpack("<i", data[base:base + 4])[0]
+    end_point = base + length
+    if data[end_point - 1] not in ('\0', 0):
+        raise ValueError('missing null-terminator in document')
+    callback({
+        'event': "document_pre",
+        'offset': (base_document, end_point),
+        'offset_size': (base_document, base_document+4),
+        'path': path,
+        'is_array': as_array,
+        'size': length})
+    base += 4
+    retval = [] if as_array else {}
+    decode_name = True # not as_array
+    idx = 0
+
+    while base < end_point - 1:
+        base_element = base
+
+        element_type = char_struct.unpack(data[base:base + 1])[0]
+
+        if PY3:
+            ll = data.index(0, base + 1) + 1
+        else:
+            ll = data.index("\x00", base + 1) + 1
+        if decode_name:
+            name = data[base + 1:ll - 1]
+            try:
+                name = name.decode("utf-8")
+            except UnicodeDecodeError:
+                pass
+        else:
+            name = None
+
+        base = ll
+        base_value = base
+
+        mypath = f"{path}/{name}" if not as_array else f"{path}/[{idx}]"
+
+        callback({
+            'event': 'value_pre',
+            'offset_element': (base_element, ),
+            'offset_type': (base_element, base_element+1),
+            'offset_name': (base_element + 1, ll-1),
+            'offset_value': (base_value, ),
+            'path': mypath,
+            'name': name,
+            'type': element_type,
+            'type_name': ELEMENT_TYPES.get(element_type, ''),
+            'idx': idx,
+            })
+
+        if element_type == 0x01:  # double
+            value = double_struct.unpack(data[base: base + 8])[0]
+            base += 8
+        elif element_type == 0x02:  # string
+            length = int_struct.unpack(data[base:base + 4])[0]
+            value = data[base + 4: base + 4 + length - 1]
+            value = value.decode("utf-8")
+            base += 4 + length
+        elif element_type == 0x03:  # document
+            value = decode_document_walk(data, base, callback, mypath)
+            base = value['offset'][1]
+        elif element_type == 0x04:  # array
+            value = decode_document_walk(data, base, callback, mypath, as_array=True)
+            base = value['offset'][1]
+        elif element_type == 0x05:  # binary
+            length, binary_subtype = int_char_struct.unpack(
+                data[base:base + 5])
+            value = data[base + 5:base + 5 + length]
+            value = decode_binary_subtype(value, binary_subtype)
+            base += 5 + length
+        elif element_type == 0x07:  # object_id
+            value = b2a_hex(data[base:base + 12])
+            base += 12
+        elif element_type == 0x08:  # boolean
+            value = bool(char_struct.unpack(data[base:base + 1])[0])
+            base += 1
+        elif element_type == 0x09:  # UTCdatetime
+            value = datetime.fromtimestamp(
+                long_struct.unpack(data[base:base + 8])[0] / 1000.0, utc)
+            base += 8
+        elif element_type == 0x0A:  # none
+            value = None
+        elif element_type == 0x10:  # int32
+            value = int_struct.unpack(data[base:base + 4])[0]
+            base += 4
+        elif element_type == 0x11:  # uint64
+            value = uint64_struct.unpack(data[base:base + 8])[0]
+            base += 8
+        elif element_type == 0x12:  # int64
+            value = long_struct.unpack(data[base:base + 8])[0]
+            base += 8
+
+        v = {
+            'event': 'value',
+            'offset_element': (base_element, base),
+            'offset_type': (base_element, base_element+1),
+            'offset_name': (base_element + 1, ll-1),
+            'offset_value': (base_value, base),
+            'path': mypath,
+            'name': name,
+            'type': element_type,
+            'type_name': ELEMENT_TYPES.get(element_type, ''),
+            'idx': idx,
+            'value': value,}
+        callback(v)
+
+        if as_array:
+            retval.append(v)
+        else:
+            retval[name] = v
+
+        idx += 1
+
+    if "$$__CLASS_NAME__$$" in retval:
+        retval = decode_object(retval)
+
+    v = {
+        'event': "document",
+        'offset': (base_document, end_point),
+        'offset_size': (base_document, base_document+4),
+        'path': path,
+        'is_array': as_array,
+        'size': length,
+        'value': retval,}
+    callback(v)
+    return v
 
 
 def encode_document_element(name, value, traversal_stack,

@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+
+import sys
+import bson_strict
+# from pprint import pp, pprint
+import pprint
+
+from os.path import dirname, realpath, sep, pardir
+import sys, os
+
+
+print(f"""#!/usr/bin/env python3
+
+import sys
+sys.path.append({repr(os.path.dirname(__file__))})
+
+from bson_strict import dumps
+from bson_strict.types import *
+""")
+
+ppp = pprint.PrettyPrinter(indent=1, width=1, compact=True, sort_dicts=False)
+
+for arg in sys.argv[1:]:
+  with open(arg, "rb") as file:
+    data = file.read()
+  print(f"with open({repr(arg+'-out')}, 'wb') as file:\n  file.write(dumps(\n    ", end='');
+  print(ppp.pformat(bson_strict.loads_strict(data)).replace("\n","\n    "))
+  print("  ))\n")
+

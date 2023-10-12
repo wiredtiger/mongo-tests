@@ -13,7 +13,7 @@ def test_suite():
     loader = unittest.TestLoader()
     for fn in os.listdir(here):
         if fn.startswith("test") and fn.endswith(".py"):
-            modname = "bson.tests." + fn[:-3]
+            modname = "bson_strict.tests." + fn[:-3]
             __import__(modname)
             module = sys.modules[modname]
             suite.addTests(loader.loadTestsFromModule(module))
@@ -21,9 +21,9 @@ def test_suite():
 
 
 def additional_tests():
-    import bson
+    import bson_strict
     suite = unittest.TestSuite()
-    suite.addTest(doctest.DocTestSuite(bson))
+    suite.addTest(doctest.DocTestSuite(bson_strict))
     return suite
 
 

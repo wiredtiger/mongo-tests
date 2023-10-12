@@ -23,10 +23,10 @@ import struct
 
 sys.path[0:0] = [""]
 
-from bson.objectid import ObjectId, _fnv_1a_24
-from bson.objectid import InvalidId
-from bson.py3compat import PY3, _unicode
-from bson.tz_util import (FixedOffset,
+from bson_strict.objectid import ObjectId, _fnv_1a_24
+from bson_strict.objectid import InvalidId
+from bson_strict.py3compat import PY3, _unicode
+from bson_strict.tz_util import (FixedOffset,
                           utc)
 
 if sys.version_info[:2] == (2, 6):

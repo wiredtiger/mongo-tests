@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from bson import dumps, loads
+from bson_strict import dumps, loads
 import json
 
 class TestIntAsKey(TestCase):
@@ -9,7 +9,7 @@ class TestIntAsKey(TestCase):
             10: 'pass?',
             10.2: 'pass?'
         }
-    
+
     def test_int_as_key(self):
         dump = dumps(self.test_dict)
         decoded = loads(dump)

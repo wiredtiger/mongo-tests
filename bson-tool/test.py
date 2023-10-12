@@ -3,7 +3,7 @@
 # Copyright (c) 2011, Kou Man Tong. All rights reserved.
 # For licensing, see LICENSE file included in the package.
 
-import bson.tests
+import bson_strict.tests
 
 if __name__ == "__main__":
-    bson.tests.main()
+    bson_strict.tests.main()

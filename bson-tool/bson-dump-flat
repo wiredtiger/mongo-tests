@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+
+import sys
+import bson_strict
+from pprint import pprint
+
+def callback(obj):
+  if obj['event'] == 'value' and obj['type_name'] not in ('document', 'array'):
+    print(f"{obj['path']}: {obj['value']}")
+
+
+for arg in sys.argv[1:]:
+  with open(arg, "rb") as file:
+    data = file.read()
+  if len(sys.argv) > 2: print(f"--- File {arg}:")
+  bson_strict.loads_walk(data, callback)
+

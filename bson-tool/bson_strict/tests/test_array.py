@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from unittest import TestCase
 
-from bson import dumps, loads
+from bson_strict import dumps, loads
 from six import PY3
 
 
