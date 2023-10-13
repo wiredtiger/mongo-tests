@@ -151,6 +151,12 @@ with open('bson-example-out', 'wb') as file:
     $ diff bson-example-text bson-example-out-text
     ```
 
+#### Screencast:
+
+https://github.com/wiredtiger/mongo-tests/assets/449936/414e9445-a803-49ce-92bb-a067dfca6555
+
+([link](https://youtu.be/_bEc_AuJvug))
+
 ### Creating a BSON file fron scratch
 
 Use the following template and put your data in it.
