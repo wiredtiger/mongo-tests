@@ -133,7 +133,7 @@ def launch_create_drop_loop(name, conf):
 
     while now - start < duration:
         # Create a random empty collection.
-        ns = collname_rand + str(random.randint(0,10000000))
+        ns = collname_rand + str(random.randint(0,10000000)) + "_" + str(count)
         client[dbname].create_collection(name=ns)
         # Insert 0 or more documents
         for y in range(num_docs):
