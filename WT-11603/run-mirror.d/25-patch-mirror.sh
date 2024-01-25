@@ -1,0 +1,1 @@
+../scripts.d/25-patch-mirror.sh

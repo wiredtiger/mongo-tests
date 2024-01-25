@@ -1,0 +1,70 @@
+
+if(MSVC)
+    set(PACKING_TEST_FLAGS /wd4068)
+else()
+    set(PACKING_TEST_FLAGS -Wno-all -Wno-error=pragmas -Wno-error=unknown-pragmas -Wno-pragmas -Wno-error=unused-but-set-variable -Wno-error=unused-parameter -Wno-error)
+endif()
+
+# Create packing-direct-test executable.
+create_test_executable(test_packing_direct
+    SOURCES packing-direct-test.c
+    EXECUTABLE_NAME "packing-direct-test"
+    FLAGS ${PACKING_TEST_FLAGS}
+)
+
+# Create packing-direct-test-all executable.
+create_test_executable(test_packing_direct_all
+    SOURCES packing-direct-test-all.c
+    EXECUTABLE_NAME "packing-direct-test-all"
+    FLAGS ${PACKING_TEST_FLAGS}
+)
+
+# Create packing-direct-test-garbage executable.
+create_test_executable(test_packing_direct_garbage
+    SOURCES packing-direct-test-garbage.c
+    EXECUTABLE_NAME "packing-direct-test-garbage"
+    FLAGS ${PACKING_TEST_FLAGS}
+)
+
+# Create packing-direct-test-garbage-fmt executable.
+create_test_executable(test_packing_direct_garbage_fmt
+    SOURCES packing-direct-test-garbage-fmt.c
+    EXECUTABLE_NAME "packing-direct-test-garbage-fmt"
+    FLAGS ${PACKING_TEST_FLAGS}
+)
+
+# Create packing-direct-test-garbage-direct executable.
+create_test_executable(test_packing_direct_garbage_direct
+    SOURCES packing-direct-test-garbage-direct.c
+    EXECUTABLE_NAME "packing-direct-test-garbage-direct"
+    FLAGS ${PACKING_TEST_FLAGS}
+)
+
+# Create packing-direct-test-garbage-direct-nocheck executable.
+create_test_executable(test_packing_direct_garbage_direct_nocheck
+    SOURCES packing-direct-test-garbage-direct-nocheck.c
+    EXECUTABLE_NAME "packing-direct-test-garbage-direct-nocheck"
+    FLAGS ${PACKING_TEST_FLAGS}
+)
+
+# Create packing-direct-test-garbage-direct-compat executable.
+create_test_executable(test_packing_direct_garbage_direct_compat
+    SOURCES packing-direct-test-garbage-direct-compat.c
+    EXECUTABLE_NAME "packing-direct-test-garbage-direct-compat"
+    FLAGS ${PACKING_TEST_FLAGS}
+)
+
+# Create packing-direct-test-garbage-direct-nocheckcompat executable.
+create_test_executable(test_packing_direct_garbage_direct_nocheckcompat
+    SOURCES packing-direct-test-garbage-direct-nocheckcompat.c
+    EXECUTABLE_NAME "packing-direct-test-garbage-direct-nocheckcompat"
+    FLAGS ${PACKING_TEST_FLAGS}
+)
+
+# Create packing-direct-test-unpack executable.
+create_test_executable(test_packing_direct_unpack
+    SOURCES packing-direct-test-unpack.c
+    EXECUTABLE_NAME "packing-direct-test-unpack"
+    FLAGS ${PACKING_TEST_FLAGS}
+)
+

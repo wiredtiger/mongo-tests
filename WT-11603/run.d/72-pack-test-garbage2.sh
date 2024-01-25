@@ -1,0 +1,1 @@
+../scripts.d/72-pack-test-garbage2.sh

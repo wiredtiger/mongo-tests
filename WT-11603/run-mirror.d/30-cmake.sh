@@ -1,0 +1,1 @@
+../scripts.d/30-cmake.sh
