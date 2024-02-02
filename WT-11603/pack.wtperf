@@ -1,0 +1,24 @@
+# btree / log
+
+#conn_config="cache_size=10G,log=(enabled=true),checkpoint=(wait=60,log_size=1G)"
+conn_config="cache_size=10G,log=(enabled=true),checkpoint=(wait=0,log_size=2G)"
+
+# small log files and switching:
+#conn_config="cache_size=10G,log=(enabled=true,file_max=1M),checkpoint=(wait=60,log_size=1G)"
+
+# No checkpoints
+#conn_config="cache_size=10G,log=(enabled=true),checkpoint=(wait=0,log_size=1G)"
+
+# No prealloc
+#conn_config="cache_size=10G,log=(enabled=true,prealloc=false,file_max=1M),checkpoint=(wait=60,log_size=1G)"
+
+table_config="type=file"
+icount=500000
+report_interval=2
+run_time=2
+populate_threads=1
+threads=((count=1,updates=1))
+
+#pareto=50
+#select_latest=true
+
