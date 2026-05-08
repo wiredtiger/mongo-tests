@@ -65,10 +65,61 @@ def print_msg(module_name, level, msg):
     if level <= verbose_level:
         print("%s : %s" % (module_name, msg))
 
-# Dump json results to the given file
+# Improvement direction for each reported stat: "up" means higher is better, "down" means lower is better.
+# Matched by prefix so numbered variants ("Worst checkpoint duration 2", etc.) are covered automatically.
+# The list must cover every key that write_json_output will ever receive (a missing entry is a hard error).
+METRIC_IMPROVEMENT_DIRECTIONS = [
+    # Workload configuration recorded alongside results.
+    ("Run Duration",                        "up"),   # more samples = test ran fully
+    ("Number of collections",               "up"),   # higher = larger scale tested
+    ("Working set document count",          "up"),   # higher = larger working set tested
+    # Throughput counters (higher is better).
+    ("Average inserts",                     "up"),
+    ("Average queries",                     "up"),
+    ("Average updates",                     "up"),
+    ("Worst per-sec insert throughput",     "up"),
+    ("Worst per-sec query throughput",      "up"),
+    ("Worst per-sec update throughput",     "up"),
+    # Latency (lower is better).
+    ("Average read latency",                "down"),
+    ("Average write latency",               "down"),
+    ("Average command latency",             "down"),
+    ("Worst per-sec reads latency",         "down"),
+    ("Worst per-sec writes latency",        "down"),
+    ("Worst per-sec commands latency",      "down"),
+    # Checkpoint durations (lower is better).
+    ("Average checkpoint duration",         "down"),
+    ("Average checkpoint-prepare duration", "down"),
+    ("Worst checkpoint duration",           "down"),
+    ("Worst checkpoint prepare duration",   "down"),
+    # Stall counts (lower is better).
+    ("Times",                               "down"),  # "Times <op> stalled"
+]
+
+def get_improvement_direction(metric_name):
+    for prefix, direction in METRIC_IMPROVEMENT_DIRECTIONS:
+        if metric_name.startswith(prefix):
+            return direction
+    return None
+
+# Dump json results to the given file. Every stat is written as a structured object with a
+# metadata.improvement_direction field so the signal processing service can determine whether
+# an increase in value is a regression or an improvement.
+# Raises ValueError if any stat is missing from METRIC_IMPROVEMENT_DIRECTIONS — adding new
+# stats without specifying their direction is a programming error.
 def write_json_output(result):
+    missing = [key for key in result if get_improvement_direction(key) is None]
+    if missing:
+        raise ValueError(
+            "improvement_direction not defined for the following stats: %s. "
+            "Add them to METRIC_IMPROVEMENT_DIRECTIONS." % missing
+        )
+    structured = {
+        key: {"value": value, "metadata": {"improvement_direction": get_improvement_direction(key)}}
+        for key, value in result.items()
+    }
     fhandle = open(output_filename, 'a')
-    fhandle.write(json.dumps(result))
+    fhandle.write(json.dumps(structured))
     fhandle.write("\n")
     fhandle.close()
 
@@ -515,7 +566,7 @@ def launch_server_status_processor(name, conf):
         if stalled_counters["update"] > max_stalled_updates:
             print("Too many stalled updates: %d. Max allowed: %d" % (stalled_counters["update"], max_stalled_updates))
             success = False
-        
+
         if result["Average inserts"] < min_avg_inserts:
             print("Average number of insert operations is too low: %d. Min allowed: %d" % (result["Average inserts"], min_avg_inserts))
             success = False

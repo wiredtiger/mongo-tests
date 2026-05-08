@@ -19,7 +19,11 @@ Usage:
 
 ATLAS_SERVER = "perfvisual.j1trn.mongodb.net"
 
-# Upload the results to an Atlas instance
+# Upload the results to an Atlas instance.
+# Metrics written by many-collection-test.py use the structured form
+#   {"value": <number>, "metadata": {"improvement_direction": "up"/"down"}}
+# so that the signal processing service can interpret the direction of each metric.
+# We preserve that nested structure in the uploaded document.
 def upload_results_atlas(coll, branch, filename):
     with open(filename, "r") as f:
         for line in f:
